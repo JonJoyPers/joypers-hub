@@ -8,6 +8,20 @@
       "when": 1772739670796,
       "tag": "0000_high_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772739670797,
+      "tag": "0001_schema_fixes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772739670798,
+      "tag": "0002_push_tokens",
+      "breakpoints": true
     }
   ]
 }

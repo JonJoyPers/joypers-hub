@@ -30,13 +30,13 @@ export async function ingestShifts(db: DbClient, since?: string) {
         continue;
       }
 
-      if (!data.startTime || !data.endTime) {
-        console.warn(`  Skipping shift ${record.Id}: missing start/end time`);
+      if (!data.date || !data.startTime || !data.endTime) {
+        console.warn(`  Skipping shift ${record.Id}: missing date or start/end time`);
         continue;
       }
 
       const row = {
-        deputyId: data.deputyId,
+        deputyId: data.deputyId as number,
         employeeId,
         locationId: data.locationDeputyId ? locMap.get(data.locationDeputyId) ?? null : null,
         date: data.date,
@@ -52,10 +52,11 @@ export async function ingestShifts(db: DbClient, since?: string) {
       });
 
       if (existing) {
-        await db.update(shifts).set(row).where(eq(shifts.deputyId, data.deputyId));
+        const { deputyId: _, ...updateData } = row;
+        await db.update(shifts).set(updateData).where(eq(shifts.deputyId, data.deputyId));
         updated++;
       } else {
-        await db.insert(shifts).values(row as any);
+        await db.insert(shifts).values(row);
         inserted++;
       }
     } catch (err) {

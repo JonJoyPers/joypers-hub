@@ -44,10 +44,15 @@ export async function ingestLeave(db: DbClient, since?: string) {
         continue;
       }
 
+      if (!data.startDate || !data.endDate) {
+        console.warn(`  Skipping leave ${record.Id}: missing start/end date`);
+        continue;
+      }
+
       const leaveTypeId = await resolveLeaveTypeId(data.leaveRuleName);
 
       const row = {
-        deputyId: data.deputyId,
+        deputyId: data.deputyId as number,
         employeeId,
         leaveTypeId,
         startDate: data.startDate,
@@ -64,10 +69,11 @@ export async function ingestLeave(db: DbClient, since?: string) {
       });
 
       if (existing) {
-        await db.update(leaveRequests).set(row).where(eq(leaveRequests.deputyId, data.deputyId));
+        const { deputyId: _, ...updateData } = row;
+        await db.update(leaveRequests).set(updateData).where(eq(leaveRequests.deputyId, data.deputyId));
         updated++;
       } else {
-        const [inserted_row] = await db.insert(leaveRequests).values(row as any).returning();
+        const [inserted_row] = await db.insert(leaveRequests).values(row).returning();
         inserted++;
 
         // If approved, create a ledger entry for the deduction
@@ -78,7 +84,7 @@ export async function ingestLeave(db: DbClient, since?: string) {
             deltaHours: String(-Math.abs(Number(data.hours))),
             reason: 'approved_leave',
             referenceId: inserted_row.id,
-            effectiveDate: data.startDate,
+            effectiveDate: data.startDate!,
           });
         }
       }

@@ -28,10 +28,18 @@ yarn-error.*
 
 # macOS
 .DS_Store
+Thumbs.db
+
+# certificates & secrets
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+db/.env
+ingestion/.env
+web/.env*
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +47,27 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Next.js
+web/.next/
+web/out/
+
+# Claude Code
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sentry
+.sentryclirc
+
+# EAS
+google-services.json
+GoogleService-Info.plist
+
+# Supabase CLI tokens & local state
+*.env.rtf
+supabase/.temp/

@@ -1,0 +1,50 @@
+name: Deputy Data Sync
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Sync mode'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - full
+
+jobs:
+  sync:
+    name: Sync Deputy → Supabase
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ingestion
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ingestion/package-lock.json
+
+      - run: npm ci
+
+      - name: Run incremental sync
+        if: github.event.inputs.mode != 'full'
+        run: npx tsx src/index.ts --since "$(date -u -d '7 hours ago' '+%Y-%m-%dT%H:%M:%S')"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEPUTY_BASE_URL: ${{ secrets.DEPUTY_BASE_URL }}
+          DEPUTY_TOKEN: ${{ secrets.DEPUTY_TOKEN }}
+
+      - name: Run full sync
+        if: github.event.inputs.mode == 'full'
+        run: npx tsx src/index.ts --full
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEPUTY_BASE_URL: ${{ secrets.DEPUTY_BASE_URL }}
+          DEPUTY_TOKEN: ${{ secrets.DEPUTY_TOKEN }}

@@ -31,14 +31,6 @@ export default function ManualPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
 
-  useEffect(() => {
-    fetchSections();
-  }, []);
-
-  useEffect(() => {
-    if (selected) fetchAcks(selected);
-  }, [selected]);
-
   async function fetchSections() {
     const { data } = await supabase.from("manual_sections").select("*").order("id");
     setSections(data || []);
@@ -52,6 +44,14 @@ export default function ManualPage() {
       .order("created_at", { ascending: false });
     setAcks(data || []);
   }
+
+  useEffect(() => {
+    fetchSections();
+  }, []);
+
+  useEffect(() => {
+    if (selected) fetchAcks(selected);
+  }, [selected]);
 
   async function saveSection() {
     if (!selected) return;

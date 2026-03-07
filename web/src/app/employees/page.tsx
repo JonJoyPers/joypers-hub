@@ -54,10 +54,6 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
   async function fetchEmployees() {
     const { data } = await supabase
       .from("employees")
@@ -65,6 +61,10 @@ export default function EmployeesPage() {
       .order("name");
     setEmployees(data || []);
   }
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   async function saveEdit(id: string) {
     const { department, title, role } = editForm;

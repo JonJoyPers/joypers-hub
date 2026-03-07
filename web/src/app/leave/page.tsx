@@ -24,10 +24,6 @@ export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [filter, setFilter] = useState("pending");
 
-  useEffect(() => {
-    fetchRequests();
-  }, [filter]);
-
   async function fetchRequests() {
     let query = supabase
       .from("leave_requests")
@@ -41,6 +37,10 @@ export default function LeavePage() {
     const { data } = await query;
     setRequests(data || []);
   }
+
+  useEffect(() => {
+    fetchRequests();
+  }, [filter]);
 
   async function handleAction(id: number, action: "approve" | "decline") {
     const { error } = await supabase.functions.invoke("approve-leave", {

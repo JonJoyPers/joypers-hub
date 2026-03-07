@@ -40,11 +40,6 @@ export default function SchedulePage() {
 
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  useEffect(() => {
-    fetchShifts();
-    fetchEmployees();
-  }, [weekStart]);
-
   async function fetchShifts() {
     const endDate = weekDates[6];
     const { data } = await supabase
@@ -64,6 +59,11 @@ export default function SchedulePage() {
       .order("name");
     setEmployees(data || []);
   }
+
+  useEffect(() => {
+    fetchShifts();
+    fetchEmployees();
+  }, [weekStart]);
 
   async function addShift(e: React.FormEvent) {
     e.preventDefault();

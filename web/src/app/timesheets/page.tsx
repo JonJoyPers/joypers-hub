@@ -20,14 +20,6 @@ export default function TimesheetsPage() {
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    fetchPunches();
-  }, [date, employeeFilter]);
-
   async function fetchEmployees() {
     const { data } = await supabase.from("employees").select("id, name").eq("is_active", true).order("name");
     setEmployees(data || []);
@@ -48,6 +40,14 @@ export default function TimesheetsPage() {
     const { data } = await query;
     setPunches(data || []);
   }
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  useEffect(() => {
+    fetchPunches();
+  }, [date, employeeFilter]);
 
   function exportCSV() {
     const headers = ["Employee", "Type", "Time", "Note"];

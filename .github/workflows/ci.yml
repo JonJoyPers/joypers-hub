@@ -68,6 +68,9 @@ jobs:
           cache: npm
           cache-dependency-path: ingestion/package-lock.json
       - run: npm ci
+      - name: Install db dependencies (shared schema)
+        run: npm ci
+        working-directory: db
       - run: npx tsc --noEmit
       - run: npm test
 

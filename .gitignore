@@ -71,3 +71,4 @@ GoogleService-Info.plist
 # Supabase CLI tokens & local state
 *.env.rtf
 supabase/.temp/
+db/.next/

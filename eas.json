@@ -27,7 +27,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_KEY": "${EXPO_PUBLIC_SUPABASE_KEY}"
+        "EXPO_PUBLIC_SUPABASE_KEY": "${EXPO_PUBLIC_SUPABASE_KEY}",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {

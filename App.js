@@ -11,16 +11,26 @@ import {
   addNotificationListeners,
 } from "./src/services/notifications";
 import { startOfflineSync, stopOfflineSync } from "./src/services/offlineQueue";
+import { Text, View } from "react-native";
 
-initSentry();
+try {
+  initSentry();
+} catch (e) {
+  console.warn("Sentry init failed:", e);
+}
 
 export default function App() {
   const navigationRef = useRef(null);
+  const [startupError, setStartupError] = React.useState(null);
 
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    useAuthStore.getState().initialize();
+    try {
+      useAuthStore.getState().initialize();
+    } catch (e) {
+      setStartupError(e?.message || String(e));
+    }
   }, []);
 
   // Start offline sync listener
@@ -46,6 +56,15 @@ export default function App() {
 
     return cleanup;
   }, [user?.id]);
+
+  if (startupError) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20, backgroundColor: "#1a1a2e" }}>
+        <Text style={{ color: "#ff6b6b", fontSize: 18, fontWeight: "bold" }}>Startup Error</Text>
+        <Text style={{ color: "#fff", fontSize: 14, marginTop: 10, textAlign: "center" }}>{startupError}</Text>
+      </View>
+    );
+  }
 
   return (
     <ErrorBoundary>

@@ -1,18 +1,11 @@
-import * as Sentry from "@sentry/react-native";
+// Sentry removed — was crashing app on native startup.
+// Re-add once the app is stable and Sentry org/project are configured.
 
 export function initSentry() {
-  const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
-  if (!dsn) {
-    console.log("Sentry DSN not configured — error monitoring disabled");
-    return;
-  }
-
-  Sentry.init({
-    dsn,
-    tracesSampleRate: 0.2,
-    environment: __DEV__ ? "development" : "production",
-    enabled: !__DEV__,
-  });
+  // no-op
 }
 
-export { Sentry };
+export const Sentry = {
+  captureException: () => {},
+  captureMessage: () => {},
+};

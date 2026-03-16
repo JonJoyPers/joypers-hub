@@ -1,17 +1,60 @@
-import React from "react";
-import { Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { StatusBar } from "expo-status-bar";
+import { NavigationContainer } from "@react-navigation/native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import RootNavigator from "./src/navigation/RootNavigator";
+import ErrorBoundary from "./src/components/ErrorBoundary";
+import { useAuthStore } from "./src/store/authStore";
+import { initSentry } from "./src/services/sentry";
+import {
+  registerForPushNotifications,
+  addNotificationListeners,
+} from "./src/services/notifications";
+import { startOfflineSync, stopOfflineSync } from "./src/services/offlineQueue";
 
-// Stage 3A: Test ONLY our supabase.js wrapper
-import { supabase, isSupabaseConfigured } from "./src/services/supabase";
+try {
+  initSentry();
+} catch (e) {
+  console.warn("Sentry init failed:", e);
+}
 
 export default function App() {
-  const configured = isSupabaseConfigured();
+  const navigationRef = useRef(null);
+  const user = useAuthStore((s) => s.user);
+
+  useEffect(() => {
+    useAuthStore.getState().initialize();
+  }, []);
+
+  useEffect(() => {
+    startOfflineSync();
+    return () => stopOfflineSync();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    registerForPushNotifications(user.id);
+
+    const cleanup = addNotificationListeners({
+      onTap: (data) => {
+        if (data?.screen && navigationRef.current) {
+          navigationRef.current.navigate(data.screen, data.params);
+        }
+      },
+    });
+
+    return cleanup;
+  }, [user?.id]);
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1a1a2e", padding: 20 }}>
-      <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>Stage 3A: supabase.js</Text>
-      <Text style={{ color: "#6bff6b", fontSize: 16, marginTop: 10 }}>Supabase wrapper loaded OK</Text>
-      <Text style={{ color: "#fff", fontSize: 14, marginTop: 8 }}>Configured: {String(configured)}</Text>
-    </View>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer ref={navigationRef}>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

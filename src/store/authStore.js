@@ -27,28 +27,32 @@ export const useAuthStore = create((set, get) => ({
   initialize: async () => {
     if (!isSupabaseConfigured()) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (session) {
-      const profile = await get()._fetchProfile(session.user.id);
-      if (profile) {
-        const mustChange = session.user.user_metadata?.must_change_password === true;
-        set({ user: profile, loginMode: "mobile", mustChangePassword: mustChange });
-      }
-    }
-
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        set({ user: null, loginMode: null });
-      } else if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+      if (session) {
         const profile = await get()._fetchProfile(session.user.id);
         if (profile) {
-          set({ user: profile, loginMode: get().loginMode || "mobile" });
+          const mustChange = session.user.user_metadata?.must_change_password === true;
+          set({ user: profile, loginMode: "mobile", mustChangePassword: mustChange });
         }
       }
-    });
+
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === "SIGNED_OUT") {
+          set({ user: null, loginMode: null });
+        } else if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          const profile = await get()._fetchProfile(session.user.id);
+          if (profile) {
+            set({ user: profile, loginMode: get().loginMode || "mobile" });
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Auth initialize failed:", e);
+    }
   },
 
   /**
@@ -70,37 +74,47 @@ export const useAuthStore = create((set, get) => ({
     }
 
     // Supabase: try email/password auth
-    // First look up email from the name (employees table)
-    const { data: emp } = await supabase
-      .from("employees")
-      .select("email")
-      .ilike("name", name)
-      .eq("is_active", true)
-      .single();
+    try {
+      // First look up email from the name (employees table)
+      const { data: emp, error: empError } = await supabase
+        .from("employees")
+        .select("email")
+        .ilike("name", name)
+        .eq("is_active", true)
+        .single();
 
-    const email = emp?.email || name; // Allow direct email login too
+      if (empError) {
+        console.warn("Employee lookup failed:", empError.message);
+      }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      const email = emp?.email || name; // Allow direct email login too
 
-    set({ loading: false });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      set({ loginError: error.message });
+      set({ loading: false });
+
+      if (error) {
+        set({ loginError: error.message });
+        return false;
+      }
+
+      const profile = await get()._fetchProfile(data.user.id);
+      if (profile) {
+        const mustChange = data.user.user_metadata?.must_change_password === true;
+        set({ user: profile, loginMode: "mobile", mustChangePassword: mustChange });
+        return true;
+      }
+
+      set({ loginError: "Account not linked to an employee profile." });
+      return false;
+    } catch (e) {
+      console.warn("Login error:", e);
+      set({ loading: false, loginError: e.message || "Login failed. Check your connection." });
       return false;
     }
-
-    const profile = await get()._fetchProfile(data.user.id);
-    if (profile) {
-      const mustChange = data.user.user_metadata?.must_change_password === true;
-      set({ user: profile, loginMode: "mobile", mustChangePassword: mustChange });
-      return true;
-    }
-
-    set({ loginError: "Account not linked to an employee profile." });
-    return false;
   },
 
   /**

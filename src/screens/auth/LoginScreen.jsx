@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { COLORS } from "../../theme/colors";
 import { useAuthStore } from "../../store/authStore";
@@ -19,15 +20,18 @@ export default function LoginScreen() {
   const loginWithCredentials = useAuthStore((s) => s.loginWithCredentials);
   const loginError = useAuthStore((s) => s.loginError);
   const clearLoginError = useAuthStore((s) => s.clearLoginError);
+  const loading = useAuthStore((s) => s.loading);
 
   const handleLogin = async () => {
+    if (loading) return;
     if (!name.trim() || !password.trim()) {
       Alert.alert("Missing fields", "Please enter your name and password.");
       return;
     }
     const success = await loginWithCredentials(name.trim(), password);
     if (!success) {
-      Alert.alert("Login failed", "Name or password not recognized.");
+      const msg = useAuthStore.getState().loginError || "Name or password not recognized.";
+      Alert.alert("Login failed", msg);
       clearLoginError();
     }
   };
@@ -71,8 +75,17 @@ export default function LoginScreen() {
             onSubmitEditing={handleLogin}
           />
 
-          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} activeOpacity={0.85}>
-            <Text style={styles.loginBtnText}>SIGN IN</Text>
+          <TouchableOpacity
+            style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.85}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={COLORS.charcoal} />
+            ) : (
+              <Text style={styles.loginBtnText}>SIGN IN</Text>
+            )}
           </TouchableOpacity>
 
           <Text style={styles.hint}>
@@ -158,6 +171,9 @@ const styles = StyleSheet.create({
     paddingVertical: 17,
     alignItems: "center",
     marginTop: 28,
+  },
+  loginBtnDisabled: {
+    opacity: 0.6,
   },
   loginBtnText: {
     fontSize: 13,

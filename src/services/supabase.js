@@ -10,12 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-/**
- * Returns true if Supabase is configured (env vars are set).
- * Stores can use this to decide whether to use Supabase or fall back to mock data.
- */
-export const isSupabaseConfigured = () =>
-  Boolean(supabaseUrl && supabaseAnonKey);
+// Track whether the real client was created successfully.
+let _clientReady = false;
 
 // Only create the real client if credentials are available.
 // createClient("", "") can crash the app on startup.
@@ -33,14 +29,41 @@ try {
       },
     }
   );
+  // Only mark ready if env vars were actually set
+  _clientReady = Boolean(supabaseUrl && supabaseAnonKey);
 } catch (e) {
   console.warn("Supabase client creation failed:", e);
-  // Create a minimal stub so imports don't crash
+  _clientReady = false;
+  // Create a stub that returns errors for any query chain.
+  // Uses a self-returning proxy pattern so any method chain works.
+  const errResult = { data: null, error: new Error("Supabase not configured") };
+  const chainable = () =>
+    new Proxy(() => errResult, {
+      get: () => chainable(),
+      apply: () => errResult,
+    });
+  const queryProxy = new Proxy(
+    {},
+    { get: () => chainable() }
+  );
   _supabase = {
-    from: () => ({ select: () => ({ eq: () => ({ single: () => ({ data: null, error: new Error("Supabase not configured") }) }) }), insert: () => ({ select: () => ({ single: () => ({ data: null, error: new Error("Supabase not configured") }) }), error: new Error("Supabase not configured") }), update: () => ({ eq: () => ({ error: new Error("Supabase not configured") }) }), delete: () => ({ eq: () => ({ error: new Error("Supabase not configured") }) }) }),
-    auth: { getSession: () => ({ data: { session: null } }), signInWithPassword: () => ({ data: null, error: new Error("Not configured") }), signOut: () => {}, onAuthStateChange: () => {}, updateUser: () => ({ error: new Error("Not configured") }), setSession: () => {} },
+    from: () => queryProxy,
+    auth: {
+      getSession: () => ({ data: { session: null } }),
+      signInWithPassword: () => ({ data: null, error: new Error("Not configured") }),
+      signOut: () => {},
+      onAuthStateChange: () => {},
+      updateUser: () => ({ error: new Error("Not configured") }),
+      setSession: () => {},
+    },
     functions: { invoke: () => ({ data: null, error: new Error("Not configured") }) },
   };
 }
+
+/**
+ * Returns true if Supabase is fully configured and the client was created.
+ * Stores use this to decide whether to use Supabase or fall back to mock data.
+ */
+export const isSupabaseConfigured = () => _clientReady;
 
 export const supabase = _supabase;

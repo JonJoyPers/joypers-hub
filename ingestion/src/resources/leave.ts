@@ -7,7 +7,7 @@ import { leaveRequests, leaveLedger, leaveTypes, employees } from '../../db-sche
 export async function ingestLeave(db: DbClient, since?: string) {
   console.log('Ingesting leave requests...');
 
-  const search = since ? { Modified: { gt: since } } : undefined;
+  const search = since ? { Modified: { gt: Math.floor(new Date(since).getTime() / 1000) } } : undefined;
   const raw = await fetchAllPages('Leave', search);
 
   // Build employee lookup

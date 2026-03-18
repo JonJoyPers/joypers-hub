@@ -7,7 +7,7 @@ import { punches, employees } from '../../db-schema';
 export async function ingestTimesheets(db: DbClient, since?: string) {
   console.log('Ingesting timesheets...');
 
-  const search = since ? { Modified: { gt: since } } : undefined;
+  const search = since ? { Modified: { gt: Math.floor(new Date(since).getTime() / 1000) } } : undefined;
   const raw = await fetchAllPages('Timesheet', search);
 
   // Build employee lookup

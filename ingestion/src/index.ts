@@ -68,7 +68,11 @@ async function main() {
     } else {
       // Run in dependency order: locations → employees → shifts/timesheets/leave
       for (const res of RESOURCES) {
-        await runners[res](db, since);
+        try {
+          await runners[res](db, since);
+        } catch (err) {
+          console.error(`\nError ingesting ${res}:`, err);
+        }
       }
     }
 

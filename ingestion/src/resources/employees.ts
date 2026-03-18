@@ -7,7 +7,7 @@ import { employees, locations } from '../../db-schema';
 export async function ingestEmployees(db: DbClient, since?: string) {
   console.log('Ingesting employees...');
 
-  const search = since ? { Modified: { gt: since } } : undefined;
+  const search = since ? { Modified: { gt: Math.floor(new Date(since).getTime() / 1000) } } : undefined;
   const raw = await fetchAllPages('Employee', search);
 
   // Build location deputy_id → id map for FK resolution

@@ -7,7 +7,7 @@ import { shifts, employees, locations } from '../../db-schema';
 export async function ingestShifts(db: DbClient, since?: string) {
   console.log('Ingesting shifts (Deputy "Roster")...');
 
-  const search = since ? { Modified: { gt: since } } : undefined;
+  const search = since ? { Modified: { gt: Math.floor(new Date(since).getTime() / 1000) } } : undefined;
   const raw = await fetchAllPages('Roster', search);
 
   // Build lookup maps

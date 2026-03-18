@@ -7,8 +7,8 @@ import { locations } from '../../db-schema';
 export async function ingestLocations(db: DbClient, since?: string) {
   console.log('Ingesting locations (Deputy "Company")...');
 
-  const search = since ? { Modified: { gt: since } } : undefined;
-  const raw = await fetchAllPages('Company', search);
+  // Company resource doesn't support Modified filter — always fetch all (few records)
+  const raw = await fetchAllPages('Company');
 
   let inserted = 0;
   let updated = 0;

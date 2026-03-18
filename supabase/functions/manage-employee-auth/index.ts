@@ -50,7 +50,7 @@ serve(async (req) => {
     }
 
     // Parse request
-    const { employeeId, action } = await req.json();
+    const { employeeId, action, email } = await req.json();
 
     if (!employeeId || !action) {
       return new Response(
@@ -59,9 +59,9 @@ serve(async (req) => {
       );
     }
 
-    if (!["disable", "enable", "reset-password"].includes(action)) {
+    if (!["disable", "enable", "reset-password", "update-email"].includes(action)) {
       return new Response(
-        JSON.stringify({ error: "action must be 'disable', 'enable', or 'reset-password'" }),
+        JSON.stringify({ error: "action must be 'disable', 'enable', 'reset-password', or 'update-email'" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -122,6 +122,31 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Employee restored" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "update-email") {
+      if (!email) {
+        return new Response(
+          JSON.stringify({ error: "email is required for update-email action" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(employeeId, {
+        email,
+      });
+
+      if (emailError) {
+        return new Response(
+          JSON.stringify({ error: `Failed to update auth email: ${emailError.message}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Auth email updated" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

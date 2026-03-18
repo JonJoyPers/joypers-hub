@@ -13,6 +13,7 @@ import {
 import { COLORS } from "../../theme/colors";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
+import { getSupabaseDebugInfo } from "../../services/supabase";
 
 export default function LoginScreen() {
   const [name, setName] = useState("");
@@ -91,6 +92,22 @@ export default function LoginScreen() {
           <Text style={styles.hint}>
             Contact your manager if you need access.
           </Text>
+
+          {/* DEBUG — remove after troubleshooting */}
+          <TouchableOpacity
+            style={{ marginTop: 20, padding: 10 }}
+            onPress={() => {
+              const d = getSupabaseDebugInfo();
+              Alert.alert(
+                "Supabase Debug",
+                `URL: ${d.urlFirst20}\nURL type: ${d.urlType}\nKey set: ${d.keySet}\nKey: ${d.keyFirst10}\nClient ready: ${d.clientReady}\nError: ${d.createError || "none"}`
+              );
+            }}
+          >
+            <Text style={{ color: COLORS.creamMuted, fontSize: 9, textAlign: "center" }}>
+              [DEBUG INFO]
+            </Text>
+          </TouchableOpacity>
 
           {Platform.OS === "ios" && (
             <TouchableOpacity

@@ -44,10 +44,15 @@ export function transformRoster(dep: any) {
 export function transformTimesheet(dep: any) {
   const punches: any[] = [];
 
+  // Synthetic punch IDs use dep.Id * 10_000 + offset to avoid collisions.
+  // Offsets: 1 = clock_in, 2 = clock_out, 100+ = breaks (even = start, odd = end).
+  // This supports up to ~4950 breaks per timesheet with no overlap between timesheets.
+  const base = dep.Id * 10_000;
+
   // Clock in
   if (dep.StartTime) {
     punches.push({
-      deputyId: dep.Id * 10 + 1, // Synthetic unique ID
+      deputyId: base + 1,
       employeeDeputyId: dep.Employee,
       type: 'clock_in' as const,
       timestamp: epochToTimestamp(dep.StartTime),
@@ -59,7 +64,7 @@ export function transformTimesheet(dep: any) {
     dep.Breaks.forEach((b: any, i: number) => {
       if (b.Start) {
         punches.push({
-          deputyId: dep.Id * 100 + i * 2 + 10,
+          deputyId: base + 100 + i * 2,
           employeeDeputyId: dep.Employee,
           type: 'break_start' as const,
           timestamp: epochToTimestamp(b.Start),
@@ -67,7 +72,7 @@ export function transformTimesheet(dep: any) {
       }
       if (b.End) {
         punches.push({
-          deputyId: dep.Id * 100 + i * 2 + 11,
+          deputyId: base + 100 + i * 2 + 1,
           employeeDeputyId: dep.Employee,
           type: 'break_end' as const,
           timestamp: epochToTimestamp(b.End),
@@ -79,7 +84,7 @@ export function transformTimesheet(dep: any) {
   // Clock out
   if (dep.EndTime && dep.EndTime > 0) {
     punches.push({
-      deputyId: dep.Id * 10 + 2,
+      deputyId: base + 2,
       employeeDeputyId: dep.Employee,
       type: 'clock_out' as const,
       timestamp: epochToTimestamp(dep.EndTime),

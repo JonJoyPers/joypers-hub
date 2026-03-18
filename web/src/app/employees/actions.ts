@@ -20,10 +20,10 @@ export async function saveEmployee(
   try {
     const supabaseAdmin = getAdminClient();
 
-    // Update employees table
+    // Update employees table — stamp updated_at so Deputy sync won't overwrite hub edits
     const { error, count } = await supabaseAdmin
       .from("employees")
-      .update(update)
+      .update({ ...update, updated_at: new Date().toISOString() })
       .eq("id", employeeId);
 
     if (error) {

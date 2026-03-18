@@ -13,10 +13,10 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Update employees table
+  // Update employees table — stamp updated_at so Deputy sync won't overwrite hub edits
   const { error } = await supabaseAdmin
     .from("employees")
-    .update(update)
+    .update({ ...update, updated_at: new Date().toISOString() })
     .eq("id", employeeId);
 
   if (error) {

@@ -12,7 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Track whether the real client was created successfully.
 let _clientReady = false;
-let _createError = null;
 
 // Only create the real client if credentials are available.
 // createClient("", "") can crash the app on startup.
@@ -35,7 +34,6 @@ try {
 } catch (e) {
   console.warn("Supabase client creation failed:", e);
   _clientReady = false;
-  _createError = e.message || String(e);
   // Create a stub that returns errors for any query chain.
   // Uses a self-returning proxy pattern so any method chain works.
   const errResult = { data: null, error: new Error("Supabase not configured") };
@@ -67,16 +65,5 @@ try {
  * Stores use this to decide whether to use Supabase or fall back to mock data.
  */
 export const isSupabaseConfigured = () => _clientReady;
-
-// Temporary debug info — remove after debugging
-export const getSupabaseDebugInfo = () => ({
-  urlRaw: supabaseUrl,
-  urlFirst20: supabaseUrl ? supabaseUrl.substring(0, 20) + "..." : "(empty)",
-  urlType: typeof supabaseUrl,
-  keySet: Boolean(supabaseAnonKey),
-  keyFirst10: supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + "..." : "(empty)",
-  clientReady: _clientReady,
-  createError: _createError,
-});
 
 export const supabase = _supabase;

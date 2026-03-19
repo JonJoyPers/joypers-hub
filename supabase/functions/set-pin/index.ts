@@ -45,33 +45,39 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      const {
-        data: { user },
-      } = await supabaseAdmin.auth.getUser(token);
 
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      // Skip auth check if using the service role key (admin call)
+      const isServiceRole = token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-      // Allow if setting own PIN, or if caller is manager/admin
-      if (user.id !== employee_id) {
-        const { data: caller } = await supabaseAdmin
-          .from("employees")
-          .select("role")
-          .eq("id", user.id)
-          .single();
+      if (!isServiceRole) {
+        const {
+          data: { user },
+        } = await supabaseAdmin.auth.getUser(token);
 
-        if (!caller || !["admin", "manager"].includes(caller.role)) {
-          return new Response(
-            JSON.stringify({ error: "Not authorized to set PIN for this employee" }),
-            {
-              status: 403,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
+        if (!user) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Allow if setting own PIN, or if caller is manager/admin
+        if (user.id !== employee_id) {
+          const { data: caller } = await supabaseAdmin
+            .from("employees")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+
+          if (!caller || !["admin", "manager"].includes(caller.role)) {
+            return new Response(
+              JSON.stringify({ error: "Not authorized to set PIN for this employee" }),
+              {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
+          }
         }
       }
     }

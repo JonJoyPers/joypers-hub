@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -36,11 +37,15 @@ export default function StoreManualScreen({ navigation }) {
   const loading = useManualStore((s) => s.loading);
   const error = useManualStore((s) => s.error);
   const fetchFromGoogleDocs = useManualStore((s) => s.fetchFromGoogleDocs);
+  const fetchAcknowledgments = useManualStore((s) => s.fetchAcknowledgments);
   const acknowledge = useManualStore((s) => s.acknowledge);
   const getUnacknowledged = useManualStore((s) => s.getUnacknowledged);
 
   useEffect(() => {
     fetchFromGoogleDocs();
+    if (user?.id) {
+      fetchAcknowledgments(user.id);
+    }
   }, []);
 
   const [expandedId, setExpandedId] = useState(null);
@@ -55,12 +60,32 @@ export default function StoreManualScreen({ navigation }) {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const handleAcknowledge = (sectionId) => {
-    acknowledge(sectionId, user.id);
+  const [acking, setAcking] = useState(false);
+
+  const handleAcknowledge = async (sectionId) => {
+    if (acking) return;
+    setAcking(true);
+    try {
+      await acknowledge(sectionId, user.id);
+    } catch (err) {
+      Alert.alert("Error", "Could not save acknowledgment. Please try again.");
+    } finally {
+      setAcking(false);
+    }
   };
 
-  const handleAcknowledgeAll = () => {
-    unacked.forEach((s) => acknowledge(s.id, user.id));
+  const handleAcknowledgeAll = async () => {
+    if (acking) return;
+    setAcking(true);
+    try {
+      for (const s of unacked) {
+        await acknowledge(s.id, user.id);
+      }
+    } catch (err) {
+      Alert.alert("Error", "Could not save acknowledgments. Please try again.");
+    } finally {
+      setAcking(false);
+    }
   };
 
   const handleEdit = (section) => {
@@ -124,11 +149,16 @@ export default function StoreManualScreen({ navigation }) {
               {unacked.map((s) => s.title).join(", ")}
             </Text>
             <TouchableOpacity
-              style={styles.ackAllBtn}
+              style={[styles.ackAllBtn, acking && styles.ackBtnDisabled]}
               onPress={handleAcknowledgeAll}
               activeOpacity={0.85}
+              disabled={acking}
             >
-              <Check size={14} color={COLORS.charcoal} strokeWidth={2.5} />
+              {acking ? (
+                <ActivityIndicator size="small" color={COLORS.charcoal} />
+              ) : (
+                <Check size={14} color={COLORS.charcoal} strokeWidth={2.5} />
+              )}
               <Text style={styles.ackAllBtnText}>ACKNOWLEDGE ALL</Text>
             </TouchableOpacity>
           </View>
@@ -184,11 +214,16 @@ export default function StoreManualScreen({ navigation }) {
                   {/* Acknowledge button for unacked sections */}
                   {needsAck && (
                     <TouchableOpacity
-                      style={styles.ackBtn}
+                      style={[styles.ackBtn, acking && styles.ackBtnDisabled]}
                       onPress={() => handleAcknowledge(section.id)}
                       activeOpacity={0.85}
+                      disabled={acking}
                     >
-                      <Check size={14} color={COLORS.charcoal} strokeWidth={2.5} />
+                      {acking ? (
+                        <ActivityIndicator size="small" color={COLORS.charcoal} />
+                      ) : (
+                        <Check size={14} color={COLORS.charcoal} strokeWidth={2.5} />
+                      )}
                       <Text style={styles.ackBtnText}>ACKNOWLEDGE</Text>
                     </TouchableOpacity>
                   )}
@@ -418,6 +453,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: COLORS.charcoal,
     letterSpacing: 1.5,
+  },
+  ackBtnDisabled: {
+    opacity: 0.5,
   },
 
   // Admin actions

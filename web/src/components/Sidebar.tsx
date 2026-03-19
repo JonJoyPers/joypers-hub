@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/leave", label: "Leave", icon: "Calendar" },
   { href: "/employees", label: "Employees", icon: "People" },
   { href: "/manual", label: "Manual", icon: "Book" },
+  { href: "/settings", label: "Settings", icon: "Gear" },
 ];
 
 const ICON_MAP: Record<string, string> = {
@@ -19,8 +20,9 @@ const ICON_MAP: Record<string, string> = {
   Schedule: "☰",
   Clock: "◷",
   Calendar: "▣",
-  People: "⊞",
+  People: "👤",
   Book: "☷",
+  Gear: "⚙",
 };
 
 export default function Sidebar() {

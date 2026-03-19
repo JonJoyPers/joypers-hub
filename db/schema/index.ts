@@ -8,3 +8,7 @@ export * from './messages';
 export * from './manual';
 export * from './social';
 export * from './pushTokens';
+export * from './closures';
+export * from './appSettings';
+export * from './availability';
+export * from './documents';

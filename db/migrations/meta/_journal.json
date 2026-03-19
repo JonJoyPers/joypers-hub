@@ -22,6 +22,34 @@
       "when": 1772739670798,
       "tag": "0002_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772739670799,
+      "tag": "0003_store_closures",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772739670800,
+      "tag": "0004_worker_type_both",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772739670801,
+      "tag": "0005_app_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772739670802,
+      "tag": "0006_employee_details",
+      "breakpoints": true
     }
   ]
 }

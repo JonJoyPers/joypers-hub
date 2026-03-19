@@ -176,7 +176,7 @@ export const useTimeclockStore = create((set, get) => ({
 
     // Store GPS as PostGIS point if available
     if (location?.latitude && location?.longitude) {
-      row.location = `(${location.longitude},${location.latitude})`;
+      row.location = `POINT(${location.longitude} ${location.latitude})`;
     }
 
     const { data, error } = await supabase

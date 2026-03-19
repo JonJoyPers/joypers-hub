@@ -11,7 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heart, MessageCircle, Send, Rss } from "lucide-react-native";
+import { Heart, MessageCircle, Send, Rss, Pencil, Trash2, X, Check } from "lucide-react-native";
 import { COLORS } from "../../theme/colors";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
@@ -31,17 +31,65 @@ function timeAgo(iso) {
 }
 
 function PostCard({ post, currentUser }) {
-  const { toggleLike, addComment } = useAppStore();
+  const { toggleLike, addComment, updateSocialPost, deleteSocialPost } = useAppStore();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(post.content);
   const liked = post.likes.includes(currentUser.id);
   const roleColor = ROLE_COLOR[post.authorRole] || COLORS.creamMuted;
+
+  const isOwner = currentUser && post.authorId === currentUser.id;
+  const isAdminOrManager =
+    currentUser &&
+    (currentUser.role === "admin" || currentUser.role === "manager");
+  const canEdit = isOwner;
+  const canDelete = isOwner || isAdminOrManager;
 
   const submitComment = () => {
     const text = commentText.trim();
     if (!text) return;
     addComment(post.id, currentUser.id, currentUser.firstName, text);
     setCommentText("");
+  };
+
+  const handleEdit = () => {
+    setEditText(post.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditText(post.content);
+  };
+
+  const handleSaveEdit = () => {
+    const text = editText.trim();
+    if (!text) {
+      Alert.alert("Cannot be empty", "Post content cannot be empty.");
+      return;
+    }
+    if (text.length < 10) {
+      Alert.alert("Too short", "Please write at least 10 characters.");
+      return;
+    }
+    updateSocialPost(post.id, text);
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteSocialPost(post.id),
+        },
+      ]
+    );
   };
 
   return (
@@ -58,9 +106,54 @@ function PostCard({ post, currentUser }) {
             {post.authorRole.charAt(0).toUpperCase() + post.authorRole.slice(1)} · {timeAgo(post.timestamp)}
           </Text>
         </View>
+        {(canEdit || canDelete) && !isEditing && (
+          <View style={styles.postActions}>
+            {canEdit && (
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={handleEdit}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Pencil size={14} color={COLORS.creamMuted} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+            {canDelete && (
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={handleDelete}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Trash2 size={14} color={COLORS.red} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
-      <Text style={styles.content}>{post.content}</Text>
+      {isEditing ? (
+        <View style={styles.editContainer}>
+          <TextInput
+            style={styles.editInput}
+            value={editText}
+            onChangeText={setEditText}
+            multiline
+            maxLength={280}
+            autoFocus
+          />
+          <View style={styles.editActions}>
+            <TouchableOpacity style={styles.editCancelBtn} onPress={handleCancelEdit}>
+              <X size={16} color={COLORS.creamMuted} strokeWidth={2} />
+              <Text style={styles.editCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editSaveBtn} onPress={handleSaveEdit}>
+              <Check size={16} color={COLORS.charcoal} strokeWidth={2.5} />
+              <Text style={styles.editSaveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.content}>{post.content}</Text>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -213,6 +306,70 @@ const styles = StyleSheet.create({
   authorName: { fontSize: 14, fontWeight: "700", color: COLORS.cream },
   authorRole: { fontSize: 11, fontWeight: "600", marginTop: 1 },
   content: { fontSize: 14, color: COLORS.cream, lineHeight: 20 },
+
+  postActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  actionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.charcoalLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  editContainer: {
+    gap: 10,
+  },
+  editInput: {
+    backgroundColor: COLORS.charcoalLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.teal + "44",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.cream,
+    lineHeight: 20,
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  editActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  editCancelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.charcoalLight,
+  },
+  editCancelText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.creamMuted,
+  },
+  editSaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.teal,
+  },
+  editSaveText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.charcoal,
+  },
 
   actions: { flexDirection: "row", gap: 20 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6 },

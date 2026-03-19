@@ -36,6 +36,7 @@ export const useManualStore = create((set, get) => ({
 
     const sections = (data || []).map((row) => ({
       id: String(row.id),
+      dbId: row.id,
       title: row.title,
       body: row.body,
       version: row.version,
@@ -111,17 +112,28 @@ export const useManualStore = create((set, get) => ({
       // Persist to Supabase if configured
       if (isSupabaseConfigured()) {
         for (const section of merged) {
-          await supabase.from("manual_sections").upsert(
-            {
-              title: section.title,
-              body: section.body,
-              version: section.version,
-              content_hash: section.contentHash,
-              updated_at: section.updatedAt,
-            },
-            { onConflict: "id" }
-          );
+          // Upsert by title (unique) so Google Docs sections map to stable DB rows
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("manual_sections")
+            .upsert(
+              {
+                title: section.title,
+                body: section.body,
+                version: section.version,
+                content_hash: section.contentHash,
+                updated_at: section.updatedAt,
+              },
+              { onConflict: "title" }
+            )
+            .select("id")
+            .single();
+
+          if (!upsertErr && upserted) {
+            section.dbId = upserted.id;
+          }
         }
+        // Re-set sections so dbId values are persisted in state
+        set({ sections: [...merged] });
       }
     } catch (err) {
       console.warn("Failed to fetch manual from Google Docs:", err.message);
@@ -233,14 +245,37 @@ export const useManualStore = create((set, get) => ({
 
     if (!isSupabaseConfigured()) return;
 
-    const numSectionId = parseInt(sectionId, 10);
-    if (isNaN(numSectionId)) return;
+    // section.dbId is the Supabase integer PK (set during fetchFromGoogleDocs
+    // sync or fetchSections). Fall back to parsing the string id directly.
+    const numSectionId = section.dbId ?? parseInt(sectionId, 10);
+    if (!numSectionId || isNaN(numSectionId)) {
+      console.warn(
+        "Cannot acknowledge: no numeric DB id for section",
+        sectionId
+      );
+      return;
+    }
 
-    await supabase.from("manual_acknowledgments").insert({
-      section_id: numSectionId,
-      section_version: section.version,
-      employee_id: userId,
-    });
+    try {
+      const { error } = await supabase.from("manual_acknowledgments").insert({
+        section_id: numSectionId,
+        section_version: section.version,
+        employee_id: userId,
+      });
+
+      if (error) {
+        console.error("Failed to save acknowledgment:", error.message);
+        // Roll back optimistic update so the button reappears
+        set((state) => ({
+          acknowledgments: state.acknowledgments.filter((a) => a.id !== ack.id),
+        }));
+      }
+    } catch (err) {
+      console.error("Acknowledgment insert threw:", err);
+      set((state) => ({
+        acknowledgments: state.acknowledgments.filter((a) => a.id !== ack.id),
+      }));
+    }
   },
 
   getUnacknowledged: (userId) => {
@@ -248,7 +283,9 @@ export const useManualStore = create((set, get) => ({
     return sections.filter((section) => {
       const hasCurrentAck = acknowledgments.some(
         (a) =>
-          a.sectionId === section.id &&
+          // Match by section.id (string) or by dbId (Supabase PK stored as string)
+          (a.sectionId === section.id ||
+            (section.dbId && a.sectionId === String(section.dbId))) &&
           a.sectionVersion === section.version &&
           a.userId === userId
       );
@@ -257,6 +294,11 @@ export const useManualStore = create((set, get) => ({
   },
 
   getAcknowledgmentsForSection: (sectionId) => {
-    return get().acknowledgments.filter((a) => a.sectionId === sectionId);
+    const section = get().sections.find((s) => s.id === sectionId);
+    return get().acknowledgments.filter(
+      (a) =>
+        a.sectionId === sectionId ||
+        (section?.dbId && a.sectionId === String(section.dbId))
+    );
   },
 }));

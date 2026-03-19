@@ -313,7 +313,11 @@ export default function AcademyScreen() {
                 <TouchableOpacity
                   key={video.id}
                   style={styles.videoCard}
-                  onPress={() => Linking.openURL(video.url)}
+                  onPress={() => {
+                    const match = video.url.match(/[?&]v=([^&]+)/);
+                    const id = match ? match[1] : video.url.split('/').pop();
+                    Linking.openURL(`https://youtu.be/${id}`);
+                  }}
                   activeOpacity={0.8}
                 >
                   <View style={styles.videoThumb}>

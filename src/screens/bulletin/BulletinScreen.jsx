@@ -5,9 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Megaphone, Pin, Plus } from "lucide-react-native";
+import { Megaphone, Pin, Plus, Pencil, Trash2 } from "lucide-react-native";
 import { COLORS } from "../../theme/colors";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
@@ -38,9 +39,19 @@ function getCountdownText(eventDateISO, now) {
   return `${diffMins} min${diffMins !== 1 ? "s" : ""}`;
 }
 
-function PostCard({ post, now }) {
+function PostCard({ post, now, currentUser, onEdit, onDelete }) {
   const color = TYPE_COLORS[post.type] || COLORS.creamMuted;
   const countdown = getCountdownText(post.eventDate, now);
+
+  const isOwner =
+    currentUser &&
+    (post.authorId === currentUser.id ||
+      post.author === currentUser.name);
+  const isAdminOrManager =
+    currentUser &&
+    (currentUser.role === "admin" || currentUser.role === "manager");
+  const canEdit = isOwner;
+  const canDelete = isOwner || isAdminOrManager;
 
   return (
     <View style={[styles.card, { borderLeftColor: color }]}>
@@ -55,6 +66,28 @@ function PostCard({ post, now }) {
         {post.pinned && (
           <View style={styles.pinnedBadge}>
             <Pin size={10} color={COLORS.teal} strokeWidth={2.5} />
+          </View>
+        )}
+        {(canEdit || canDelete) && (
+          <View style={styles.postActions}>
+            {canEdit && (
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={() => onEdit(post)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Pencil size={14} color={COLORS.creamMuted} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
+            {canDelete && (
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={() => onDelete(post)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Trash2 size={14} color={COLORS.red} strokeWidth={2} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -85,8 +118,10 @@ export default function BulletinScreen() {
   const insets = useSafeAreaInsets();
   const markBulletinRead = useAppStore((s) => s.markBulletinRead);
   const bulletinPosts = useAppStore((s) => s.bulletinPosts);
+  const deleteBulletinPost = useAppStore((s) => s.deleteBulletinPost);
   const user = useAuthStore((s) => s.user);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
   const [now, setNow] = useState(new Date());
 
   const canCreate = user?.role === "admin" || user?.role === "manager";
@@ -102,6 +137,31 @@ export default function BulletinScreen() {
     const t = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(t);
   }, []);
+
+  const handleEdit = (post) => {
+    setEditingPost(post);
+    setShowCreate(true);
+  };
+
+  const handleDelete = (post) => {
+    Alert.alert(
+      "Delete Post",
+      `Are you sure you want to delete "${post.title}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteBulletinPost(post.id),
+        },
+      ]
+    );
+  };
+
+  const handleCloseModal = () => {
+    setShowCreate(false);
+    setEditingPost(null);
+  };
 
   const pinned = bulletinPosts.filter((p) => p.pinned);
   const unpinned = bulletinPosts
@@ -119,11 +179,29 @@ export default function BulletinScreen() {
         {pinned.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>PINNED</Text>
-            {pinned.map((p) => <PostCard key={p.id} post={p} now={now} />)}
+            {pinned.map((p) => (
+              <PostCard
+                key={p.id}
+                post={p}
+                now={now}
+                currentUser={user}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
           </>
         )}
         <Text style={styles.sectionLabel}>LATEST</Text>
-        {unpinned.map((p) => <PostCard key={p.id} post={p} now={now} />)}
+        {unpinned.map((p) => (
+          <PostCard
+            key={p.id}
+            post={p}
+            now={now}
+            currentUser={user}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ))}
         <View style={{ height: 32 }} />
       </ScrollView>
 
@@ -139,7 +217,8 @@ export default function BulletinScreen() {
 
       <CreateBulletinModal
         visible={showCreate}
-        onClose={() => setShowCreate(false)}
+        onClose={handleCloseModal}
+        editingPost={editingPost}
       />
     </View>
   );
@@ -171,6 +250,21 @@ const styles = StyleSheet.create({
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: COLORS.teal + "22",
     alignItems: "center", justifyContent: "center",
+  },
+
+  postActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginLeft: 4,
+  },
+  actionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.charcoalLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   countdownBadge: {

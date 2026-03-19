@@ -77,6 +77,7 @@ export const useAppStore = create((set, get) => ({
     if (data) {
       const posts = data.map((row) => ({
         id: String(row.id),
+        authorId: row.author_id || row.author?.id || null,
         type: row.type,
         pinned: row.pinned,
         title: row.title,
@@ -107,6 +108,7 @@ export const useAppStore = create((set, get) => ({
     if (!isSupabaseConfigured()) {
       const post = {
         id: `b_${Date.now()}`,
+        authorId: authorId || null,
         type,
         pinned: !!pinned,
         title,
@@ -144,6 +146,7 @@ export const useAppStore = create((set, get) => ({
 
     const post = {
       id: String(data.id),
+      authorId: data.author_id || data.author?.id || authorId,
       type: data.type,
       pinned: data.pinned,
       title: data.title,
@@ -156,6 +159,63 @@ export const useAppStore = create((set, get) => ({
       eventDate: data.event_date,
     };
     set((s) => ({ bulletinPosts: [post, ...s.bulletinPosts] }));
+  },
+
+  updateBulletinPost: async (postId, updates) => {
+    // Optimistic update
+    set((s) => ({
+      bulletinPosts: s.bulletinPosts.map((p) =>
+        p.id === postId ? { ...p, ...updates } : p
+      ),
+    }));
+
+    if (!isSupabaseConfigured()) return;
+
+    const numPostId = parseInt(postId, 10);
+    if (isNaN(numPostId)) return;
+
+    const dbUpdates = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.body !== undefined) dbUpdates.body = updates.body;
+    if (updates.type !== undefined) dbUpdates.type = updates.type;
+    if (updates.emoji !== undefined) dbUpdates.emoji = updates.emoji;
+    if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+    if (updates.pinned !== undefined) dbUpdates.pinned = updates.pinned;
+    if (updates.eventDate !== undefined) dbUpdates.event_date = updates.eventDate;
+
+    const { error } = await supabase
+      .from("bulletin_posts")
+      .update(dbUpdates)
+      .eq("id", numPostId);
+
+    if (error) {
+      console.error("Failed to update bulletin post:", error.message);
+      // Revert on error
+      get().fetchBulletinPosts();
+    }
+  },
+
+  deleteBulletinPost: async (postId) => {
+    // Optimistic update
+    set((s) => ({
+      bulletinPosts: s.bulletinPosts.filter((p) => p.id !== postId),
+    }));
+
+    if (!isSupabaseConfigured()) return;
+
+    const numPostId = parseInt(postId, 10);
+    if (isNaN(numPostId)) return;
+
+    const { error } = await supabase
+      .from("bulletin_posts")
+      .delete()
+      .eq("id", numPostId);
+
+    if (error) {
+      console.error("Failed to delete bulletin post:", error.message);
+      // Revert on error
+      get().fetchBulletinPosts();
+    }
   },
 
   // ── Social Feed ────────────────────────────────────────
@@ -378,5 +438,51 @@ export const useAppStore = create((set, get) => ({
       author_id: authorId,
       content,
     });
+  },
+
+  updateSocialPost: async (postId, content) => {
+    // Optimistic update
+    set((s) => ({
+      socialPosts: s.socialPosts.map((p) =>
+        p.id === postId ? { ...p, content } : p
+      ),
+    }));
+
+    if (!isSupabaseConfigured()) return;
+
+    const numPostId = parseInt(postId, 10);
+    if (isNaN(numPostId)) return;
+
+    const { error } = await supabase
+      .from("social_posts")
+      .update({ content })
+      .eq("id", numPostId);
+
+    if (error) {
+      console.error("Failed to update social post:", error.message);
+      get().fetchSocialPosts();
+    }
+  },
+
+  deleteSocialPost: async (postId) => {
+    // Optimistic update
+    set((s) => ({
+      socialPosts: s.socialPosts.filter((p) => p.id !== postId),
+    }));
+
+    if (!isSupabaseConfigured()) return;
+
+    const numPostId = parseInt(postId, 10);
+    if (isNaN(numPostId)) return;
+
+    const { error } = await supabase
+      .from("social_posts")
+      .delete()
+      .eq("id", numPostId);
+
+    if (error) {
+      console.error("Failed to delete social post:", error.message);
+      get().fetchSocialPosts();
+    }
   },
 }));

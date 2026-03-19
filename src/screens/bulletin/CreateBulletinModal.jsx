@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -35,9 +35,10 @@ const TYPE_COLORS = {
   recognition: COLORS.green,
 };
 
-export default function CreateBulletinModal({ visible, onClose }) {
+export default function CreateBulletinModal({ visible, onClose, editingPost }) {
   const user = useAuthStore((s) => s.user);
   const addBulletinPost = useAppStore((s) => s.addBulletinPost);
+  const updateBulletinPost = useAppStore((s) => s.updateBulletinPost);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -46,6 +47,37 @@ export default function CreateBulletinModal({ visible, onClose }) {
   const [tagsText, setTagsText] = useState("");
   const [pinned, setPinned] = useState(false);
   const [eventDate, setEventDate] = useState("");
+
+  const isEditing = !!editingPost;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingPost) {
+      setTitle(editingPost.title || "");
+      setBody(editingPost.body || "");
+      setSelectedType(editingPost.type || "announcement");
+      setEmoji(editingPost.emoji || "📋");
+      setTagsText(
+        (editingPost.tags || [])
+          .map((t) => t.replace(/^#/, ""))
+          .join(", ")
+      );
+      setPinned(!!editingPost.pinned);
+      setEventDate(editingPost.eventDate || "");
+    } else {
+      resetForm();
+    }
+  }, [editingPost]);
+
+  const resetForm = () => {
+    setTitle("");
+    setBody("");
+    setSelectedType("announcement");
+    setEmoji("📋");
+    setTagsText("");
+    setPinned(false);
+    setEventDate("");
+  };
 
   const handleTypeSelect = (type) => {
     setSelectedType(type.key);
@@ -71,26 +103,32 @@ export default function CreateBulletinModal({ visible, onClose }) {
       }
     }
 
-    addBulletinPost({
-      title: title.trim(),
-      body: body.trim(),
-      type: selectedType,
-      emoji: emoji || TYPES.find((t) => t.key === selectedType)?.emoji || "📋",
-      tags,
-      pinned,
-      author: user.name,
-      authorRole: user.role,
-      eventDate: parsedEventDate,
-    });
+    if (isEditing) {
+      updateBulletinPost(editingPost.id, {
+        title: title.trim(),
+        body: body.trim(),
+        type: selectedType,
+        emoji: emoji || TYPES.find((t) => t.key === selectedType)?.emoji || "📋",
+        tags,
+        pinned,
+        eventDate: parsedEventDate,
+      });
+    } else {
+      addBulletinPost({
+        title: title.trim(),
+        body: body.trim(),
+        type: selectedType,
+        emoji: emoji || TYPES.find((t) => t.key === selectedType)?.emoji || "📋",
+        tags,
+        pinned,
+        author: user.name,
+        authorRole: user.role,
+        authorId: user.id,
+        eventDate: parsedEventDate,
+      });
+    }
 
-    // Reset form
-    setTitle("");
-    setBody("");
-    setSelectedType("announcement");
-    setEmoji("📋");
-    setTagsText("");
-    setPinned(false);
-    setEventDate("");
+    resetForm();
     onClose();
   };
 
@@ -103,8 +141,10 @@ export default function CreateBulletinModal({ visible, onClose }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.eyebrow}>NEW POST</Text>
-            <Text style={styles.headerTitle}>Create Bulletin</Text>
+            <Text style={styles.eyebrow}>{isEditing ? "EDIT POST" : "NEW POST"}</Text>
+            <Text style={styles.headerTitle}>
+              {isEditing ? "Edit Bulletin" : "Create Bulletin"}
+            </Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <X size={22} color={COLORS.creamMuted} strokeWidth={2} />
@@ -200,13 +240,15 @@ export default function CreateBulletinModal({ visible, onClose }) {
             />
           </View>
 
-          {/* Publish Button */}
+          {/* Publish / Save Button */}
           <TouchableOpacity
             style={styles.publishBtn}
             onPress={handlePublish}
             activeOpacity={0.85}
           >
-            <Text style={styles.publishBtnText}>PUBLISH</Text>
+            <Text style={styles.publishBtnText}>
+              {isEditing ? "SAVE CHANGES" : "PUBLISH"}
+            </Text>
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />

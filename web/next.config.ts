@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: path.resolve(import.meta.dirname),
+    resolveAlias: {
+      tailwindcss: path.resolve(import.meta.dirname, "node_modules/tailwindcss"),
+    },
+  },
 };
 
 export default withSentryConfig(nextConfig, {

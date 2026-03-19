@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { supabase, isSupabaseConfigured } from "../services/supabase";
 import { MOCK_TIMECARDS } from "../data/mockTimecards";
-import { enqueue, isOnline, getPendingCount } from "../services/offlineQueue";
+import { enqueue, isOnline, getPendingCount, onSyncComplete } from "../services/offlineQueue";
 
 /**
  * timeclockStore — manages punch history and current clock state
@@ -174,9 +174,9 @@ export const useTimeclockStore = create((set, get) => ({
       note,
     };
 
-    // Store GPS as PostGIS point if available
+    // Store GPS as PostgreSQL point (x,y) = (longitude,latitude)
     if (location?.latitude && location?.longitude) {
-      row.location = `POINT(${location.longitude} ${location.latitude})`;
+      row.location = `(${location.longitude},${location.latitude})`;
     }
 
     const { data, error } = await supabase
@@ -208,6 +208,25 @@ export const useTimeclockStore = create((set, get) => ({
     return punch;
   },
 }));
+
+// After offline sync completes, refresh punches from DB and clear offline markers
+onSyncComplete(async () => {
+  const store = useTimeclockStore.getState();
+  // Remove local offline-only records (they are now in DB)
+  const cleanPunches = store.punches.filter((p) => !p.offline);
+  useTimeclockStore.setState({ punches: cleanPunches, pendingOffline: 0 });
+  // Re-fetch from DB to get the canonical records
+  // We don't know the current userId here, so fetch all (the query is scoped by RLS anyway)
+  if (isSupabaseConfigured()) {
+    const { data } = await supabase
+      .from("punches")
+      .select("*")
+      .order("timestamp", { ascending: false });
+    if (data) {
+      useTimeclockStore.setState({ punches: data.map(mapPunchFromDb) });
+    }
+  }
+});
 
 /**
  * Map a Supabase punch row to the shape the app expects.

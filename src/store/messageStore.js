@@ -86,6 +86,8 @@ export const useMessageStore = create((set, get) => ({
   messages: isSupabaseConfigured() ? [] : [...SEED_MESSAGES],
   loading: false,
   _subscription: null,
+  /** Map of employee_id -> { id, name, firstName, role, title, department } for Supabase mode */
+  participantProfiles: {},
 
   /**
    * Fetch conversations for a user from Supabase.
@@ -107,15 +109,38 @@ export const useMessageStore = create((set, get) => ({
     }
 
     const convIds = participantRows.map((p) => p.conversation_id);
-    const unreadMap = Object.fromEntries(
-      participantRows.map((p) => [p.conversation_id, p.unread_count])
-    );
 
     // Get all participants for these conversations
     const { data: allParticipants } = await supabase
       .from("conversation_participants")
       .select("conversation_id, employee_id, unread_count")
       .in("conversation_id", convIds);
+
+    // Fetch employee profiles for all participants
+    const participantIds = [
+      ...new Set((allParticipants || []).map((p) => p.employee_id)),
+    ];
+    if (participantIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("employees")
+        .select("id, name, first_name, role, title, department")
+        .in("id", participantIds);
+
+      if (profiles) {
+        const profileMap = { ...get().participantProfiles };
+        for (const p of profiles) {
+          profileMap[p.id] = {
+            id: p.id,
+            name: p.name,
+            firstName: p.first_name || (p.name ? p.name.split(" ")[0] : ""),
+            role: p.role,
+            title: p.title,
+            department: p.department,
+          };
+        }
+        set({ participantProfiles: profileMap });
+      }
+    }
 
     // Get latest message per conversation
     const { data: latestMessages } = await supabase
@@ -170,6 +195,9 @@ export const useMessageStore = create((set, get) => ({
   subscribeToMessages: (userId) => {
     if (!isSupabaseConfigured()) return;
 
+    // Guard against duplicate subscriptions
+    if (get()._subscription) return;
+
     const subscription = supabase
       .channel("messages-realtime")
       .on(
@@ -177,8 +205,14 @@ export const useMessageStore = create((set, get) => ({
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const msg = payload.new;
+          const msgId = String(msg.id);
+
+          // Deduplicate — the sender already added the message optimistically
+          const alreadyExists = get().messages.some((m) => m.id === msgId);
+          if (alreadyExists) return;
+
           const newMessage = {
-            id: String(msg.id),
+            id: msgId,
             conversationId: String(msg.conversation_id),
             senderId: msg.sender_id,
             text: msg.text,
@@ -341,6 +375,7 @@ export const useMessageStore = create((set, get) => ({
 
     if (error) {
       console.error("Failed to send message:", error.message);
+      return;
     }
 
     // Increment unread for other participants

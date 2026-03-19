@@ -50,7 +50,15 @@
           "color": "#008080"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "joypers",
+          "project": "joypers-hub-mobile"
+        }
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

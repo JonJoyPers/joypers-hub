@@ -9,6 +9,7 @@ import { initSentry } from "./src/services/sentry";
 import {
   registerForPushNotifications,
   addNotificationListeners,
+  getInitialNotification,
 } from "./src/services/notifications";
 import { startOfflineSync, stopOfflineSync } from "./src/services/offlineQueue";
 
@@ -34,7 +35,16 @@ export default function App() {
   useEffect(() => {
     if (!user?.id) return;
 
-    registerForPushNotifications(user.id);
+    registerForPushNotifications(user.id).catch((err) =>
+      console.warn("Push registration error:", err)
+    );
+
+    // Handle notification tap that launched the app from a killed state
+    getInitialNotification().then((data) => {
+      if (data?.screen && navigationRef.current) {
+        navigationRef.current.navigate(data.screen, data.params);
+      }
+    });
 
     const cleanup = addNotificationListeners({
       onTap: (data) => {

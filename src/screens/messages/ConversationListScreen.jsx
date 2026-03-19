@@ -32,7 +32,8 @@ function ConversationRow({ conversation, currentUserId, onPress }) {
   const otherUserId = conversation.participants.find(
     (p) => p !== currentUserId
   );
-  const otherUser = getUserById(otherUserId);
+  const participantProfiles = useMessageStore((s) => s.participantProfiles);
+  const otherUser = getUserById(otherUserId) || participantProfiles[otherUserId];
   if (!otherUser) return null;
 
   const roleColor = ROLE_COLOR[otherUser.role] || COLORS.creamMuted;
@@ -140,6 +141,8 @@ export default function ConversationListScreen({ navigation, embedded = false })
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const fetchConversations = useMessageStore((s) => s.fetchConversations);
+  const subscribeToMessages = useMessageStore((s) => s.subscribeToMessages);
+  const unsubscribe = useMessageStore((s) => s.unsubscribe);
   const getConversationsForUser = useMessageStore(
     (s) => s.getConversationsForUser
   );
@@ -151,11 +154,14 @@ export default function ConversationListScreen({ navigation, embedded = false })
 
   useEffect(() => {
     fetchConversations(user?.id);
+    subscribeToMessages(user?.id);
+    return () => unsubscribe();
   }, [user?.id]);
 
-  const handleSelectUser = (otherUser) => {
+  const handleSelectUser = async (otherUser) => {
     setShowPicker(false);
-    const conv = getOrCreateConversation(user.id, otherUser.id);
+    const conv = await getOrCreateConversation(user.id, otherUser.id);
+    if (!conv) return;
     navigation.navigate("Chat", {
       conversationId: conv.id,
       otherUserId: otherUser.id,

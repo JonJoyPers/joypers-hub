@@ -57,6 +57,13 @@
       "when": 1772739670803,
       "tag": "0007_academy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772739670804,
+      "tag": "0008_push_tokens_updated_at",
+      "breakpoints": true
     }
   ]
 }

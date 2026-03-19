@@ -41,8 +41,9 @@ export default function ChatScreen({ route, navigation }) {
   // Subscribe to messages array to trigger re-render on new messages
   const _messages = useMessageStore((s) => s.messages);
 
+  const participantProfiles = useMessageStore((s) => s.participantProfiles);
   const messages = getMessages(conversationId);
-  const otherUser = getUserById(otherUserId);
+  const otherUser = getUserById(otherUserId) || participantProfiles[otherUserId];
   const roleColor = ROLE_COLOR[otherUser?.role] || COLORS.creamMuted;
 
   const [text, setText] = useState("");

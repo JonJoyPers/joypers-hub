@@ -7,4 +7,5 @@ export const pushTokens = pgTable('push_tokens', {
   token: text('token').notNull().unique(),
   platform: text('platform'), // 'ios' | 'android'
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

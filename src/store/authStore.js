@@ -188,7 +188,23 @@ export const useAuthStore = create((set, get) => ({
       return;
     }
 
-    await supabase.from("employees").update(fields).eq("id", currentUser.id);
+    // Handle PIN separately — must be bcrypt-hashed via edge function
+    if (fields.pin) {
+      try {
+        const { error } = await supabase.functions.invoke("set-pin", {
+          body: { pin: fields.pin, employee_id: currentUser.id },
+        });
+        if (error) console.warn("Failed to set PIN:", error.message);
+      } catch (e) {
+        console.warn("set-pin call failed:", e);
+      }
+    }
+
+    // Update remaining fields directly (exclude pin and password from DB update)
+    const { pin, password, ...dbFields } = fields;
+    if (Object.keys(dbFields).length > 0) {
+      await supabase.from("employees").update(dbFields).eq("id", currentUser.id);
+    }
   },
 
   /**

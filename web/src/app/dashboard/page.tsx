@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import DashboardLayout from "@/components/DashboardLayout";
+import LocalTime from "@/components/LocalTime";
 
 interface DashboardShift {
   id: number;
@@ -88,9 +89,9 @@ export default async function DashboardPage() {
                 <div key={shift.id} className="flex justify-between items-center py-2 px-3 rounded-lg bg-charcoal-light">
                   <span className="text-cream text-sm">{shift.employee?.name}</span>
                   <span className="text-cream-muted text-xs">
-                    {new Date(shift.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <LocalTime timestamp={shift.start_time} />
                     {" - "}
-                    {new Date(shift.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <LocalTime timestamp={shift.end_time} />
                   </span>
                 </div>
               ))}
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <span className="text-cream-muted text-xs">
-                    {new Date(punch.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <LocalTime timestamp={punch.timestamp} />
                   </span>
                 </div>
               ))}

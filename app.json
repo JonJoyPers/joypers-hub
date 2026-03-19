@@ -55,10 +55,10 @@
         "@sentry/react-native/expo",
         {
           "organization": "joypers",
-          "project": "joypers-hub-mobile"
+          "project": "joypers-hub-mobile",
+          "uploadSourceMaps": false
         }
-      ],
-      "@sentry/react-native"
+      ]
     ],
     "extra": {
       "eas": {

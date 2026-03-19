@@ -243,7 +243,7 @@ export const useAuthStore = create((set, get) => ({
       avatar: data.avatar_url,
       hireDate: data.hire_date,
       birthday: data.birthday,
-      tags: data.worker_type === "remote" ? ["Remote"] : [],
+      tags: data.worker_type === "remote" || data.worker_type === "both" ? ["Remote"] : [],
     };
   },
 }));

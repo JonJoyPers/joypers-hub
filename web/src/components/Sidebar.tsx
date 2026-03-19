@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/leave", label: "Leave", icon: "Calendar" },
   { href: "/employees", label: "Employees", icon: "People" },
   { href: "/manual", label: "Manual", icon: "Book" },
+  { href: "/academy", label: "Academy", icon: "GradCap" },
   { href: "/settings", label: "Settings", icon: "Gear" },
 ];
 
@@ -22,6 +23,7 @@ const ICON_MAP: Record<string, string> = {
   Calendar: "▣",
   People: "👤",
   Book: "☷",
+  GradCap: "🎓",
   Gear: "⚙",
 };
 

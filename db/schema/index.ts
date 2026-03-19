@@ -12,3 +12,4 @@ export * from './closures';
 export * from './appSettings';
 export * from './availability';
 export * from './documents';
+export * from './academy';

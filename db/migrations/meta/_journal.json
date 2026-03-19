@@ -50,6 +50,13 @@
       "when": 1772739670802,
       "tag": "0006_employee_details",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772739670803,
+      "tag": "0007_academy",
+      "breakpoints": true
     }
   ]
 }

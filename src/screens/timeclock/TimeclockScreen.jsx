@@ -254,7 +254,7 @@ export default function TimeclockScreen({ embedded = false }) {
                       <View style={styles.punchLocation}>
                         <MapPin size={10} color={COLORS.teal} strokeWidth={2.5} />
                         <Text style={styles.punchLocationText}>
-                          {p.location.latitude.toFixed(4)}, {p.location.longitude.toFixed(4)}
+                          {(p.location.latitude ?? p.location.y ?? 0).toFixed(4)}, {(p.location.longitude ?? p.location.x ?? 0).toFixed(4)}
                         </Text>
                       </View>
                     )}

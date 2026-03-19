@@ -155,11 +155,25 @@ CREATE POLICY "Managers can read all acknowledgments" ON manual_acknowledgments
 CREATE POLICY "Users can create own acknowledgments" ON manual_acknowledgments
   FOR INSERT WITH CHECK (employee_id = auth.uid());
 
+-- ── Bulletin Posts (additional) ──
+CREATE POLICY "Authenticated users can create bulletin posts" ON bulletin_posts
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Authors can update own bulletin posts" ON bulletin_posts
+  FOR UPDATE USING (author_id = auth.uid());
+CREATE POLICY "Authors can delete own bulletin posts" ON bulletin_posts
+  FOR DELETE USING (author_id = auth.uid());
+
 -- ── Social Posts ──
 CREATE POLICY "Everyone can read social posts" ON social_posts
   FOR SELECT USING (true);
 CREATE POLICY "Authenticated users can create posts" ON social_posts
   FOR INSERT WITH CHECK (author_id = auth.uid());
+CREATE POLICY "Users can update own social posts" ON social_posts
+  FOR UPDATE USING (author_id = auth.uid());
+CREATE POLICY "Users can delete own social posts" ON social_posts
+  FOR DELETE USING (author_id = auth.uid());
+CREATE POLICY "Managers can manage social posts" ON social_posts
+  FOR ALL USING (is_admin_or_manager());
 
 -- ── Social Likes ──
 CREATE POLICY "Everyone can read likes" ON social_likes

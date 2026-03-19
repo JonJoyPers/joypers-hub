@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import DashboardLayout from "@/components/DashboardLayout";
 import LocalTime from "@/components/LocalTime";
+import ClockedInCard from "@/components/ClockedInCard";
 
 interface DashboardShift {
   id: number;
@@ -27,21 +28,37 @@ export default async function DashboardPage() {
   const [
     { count: totalEmployees },
     { count: todayShifts },
-    { count: clockedIn },
+    { data: clockInPunches },
     { count: pendingLeave },
   ] = await Promise.all([
     supabase.from("employees").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("shifts").select("*", { count: "exact", head: true }).eq("date", today),
     supabase
       .from("punches")
-      .select("employee_id", { count: "exact", head: true })
+      .select("employee_id, timestamp, employee:employees(name)")
       .gte("timestamp", todayStart)
-      .eq("type", "clock_in"),
+      .eq("type", "clock_in")
+      .order("timestamp", { ascending: false }),
     supabase
       .from("leave_requests")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
   ]);
+
+  // Deduplicate by employee (keep earliest clock-in)
+  const seenEmployees = new Set<string>();
+  const clockedInEmployees: { name: string; timestamp: string }[] = [];
+  for (const p of (clockInPunches || []).reverse()) {
+    if (!seenEmployees.has(p.employee_id)) {
+      seenEmployees.add(p.employee_id);
+      const emp = p.employee as unknown as { name: string } | null;
+      clockedInEmployees.push({
+        name: emp?.name || "Unknown",
+        timestamp: p.timestamp,
+      });
+    }
+  }
+  const clockedIn = clockedInEmployees.length;
 
   // Today's shifts with employee names
   const { data: todaySchedule } = await supabase
@@ -61,7 +78,6 @@ export default async function DashboardPage() {
   const stats = [
     { label: "Active Employees", value: totalEmployees ?? 0, color: "text-teal-light" },
     { label: "Today's Shifts", value: todayShifts ?? 0, color: "text-amber" },
-    { label: "Clocked In Today", value: clockedIn ?? 0, color: "text-green" },
     { label: "Leave Pending", value: pendingLeave ?? 0, color: "text-rose" },
   ];
 
@@ -77,6 +93,7 @@ export default async function DashboardPage() {
             <p className={`text-3xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
+        <ClockedInCard count={clockedIn} employees={clockedInEmployees} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

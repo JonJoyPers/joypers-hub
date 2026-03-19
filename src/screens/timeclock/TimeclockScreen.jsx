@@ -250,11 +250,11 @@ export default function TimeclockScreen({ embedded = false }) {
                   <Text style={styles.punchLabel}>{punchLabel(p.type)}</Text>
                   <View style={styles.punchMeta}>
                     <Text style={styles.punchDate}>{formatDate(p.timestamp)}</Text>
-                    {p.location && (
+                    {p.location?.latitude != null && p.location?.longitude != null && (
                       <View style={styles.punchLocation}>
                         <MapPin size={10} color={COLORS.teal} strokeWidth={2.5} />
                         <Text style={styles.punchLocationText}>
-                          {(p.location.latitude ?? p.location.y ?? 0).toFixed(4)}, {(p.location.longitude ?? p.location.x ?? 0).toFixed(4)}
+                          {Number(p.location.latitude).toFixed(4)}, {Number(p.location.longitude).toFixed(4)}
                         </Text>
                       </View>
                     )}

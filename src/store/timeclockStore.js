@@ -221,7 +221,10 @@ function mapPunchFromDb(row) {
     photoUri: row.photo_url,
     note: row.note,
     location: row.location
-      ? { longitude: row.location.x, latitude: row.location.y }
+      ? {
+          longitude: row.location.x ?? row.location.longitude ?? null,
+          latitude: row.location.y ?? row.location.latitude ?? null,
+        }
       : null,
   };
 }

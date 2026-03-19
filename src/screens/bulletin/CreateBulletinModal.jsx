@@ -12,7 +12,8 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { X } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { X, Calendar } from "lucide-react-native";
 import { COLORS } from "../../theme/colors";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
@@ -35,6 +36,14 @@ const TYPE_COLORS = {
   recognition: COLORS.green,
 };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDateDisplay(date) {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export default function CreateBulletinModal({ visible, onClose, editingPost }) {
   const user = useAuthStore((s) => s.user);
   const addBulletinPost = useAppStore((s) => s.addBulletinPost);
@@ -46,7 +55,8 @@ export default function CreateBulletinModal({ visible, onClose, editingPost }) {
   const [emoji, setEmoji] = useState("📋");
   const [tagsText, setTagsText] = useState("");
   const [pinned, setPinned] = useState(false);
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState(null);
+  const [showEventDatePicker, setShowEventDatePicker] = useState(false);
 
   const isEditing = !!editingPost;
 
@@ -63,7 +73,12 @@ export default function CreateBulletinModal({ visible, onClose, editingPost }) {
           .join(", ")
       );
       setPinned(!!editingPost.pinned);
-      setEventDate(editingPost.eventDate || "");
+      if (editingPost.eventDate) {
+        const parsed = new Date(editingPost.eventDate);
+        setEventDate(!isNaN(parsed.getTime()) ? parsed : null);
+      } else {
+        setEventDate(null);
+      }
     } else {
       resetForm();
     }
@@ -76,7 +91,8 @@ export default function CreateBulletinModal({ visible, onClose, editingPost }) {
     setEmoji("📋");
     setTagsText("");
     setPinned(false);
-    setEventDate("");
+    setEventDate(null);
+    setShowEventDatePicker(false);
   };
 
   const handleTypeSelect = (type) => {
@@ -95,13 +111,7 @@ export default function CreateBulletinModal({ visible, onClose, editingPost }) {
       .filter(Boolean)
       .map((t) => (t.startsWith("#") ? t : `#${t}`));
 
-    let parsedEventDate = null;
-    if (eventDate.trim()) {
-      const parsed = new Date(eventDate.trim());
-      if (!isNaN(parsed.getTime())) {
-        parsedEventDate = parsed.toISOString();
-      }
-    }
+    const parsedEventDate = eventDate instanceof Date ? eventDate.toISOString() : null;
 
     if (isEditing) {
       updateBulletinPost(editingPost.id, {
@@ -221,13 +231,48 @@ export default function CreateBulletinModal({ visible, onClose, editingPost }) {
 
           {/* Event Date (optional) */}
           <Text style={styles.label}>EVENT DATE (optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. 2026-04-05 or March 15, 2026"
-            placeholderTextColor={COLORS.creamMuted}
-            value={eventDate}
-            onChangeText={setEventDate}
-          />
+          <View style={styles.dateFieldRow}>
+            <TouchableOpacity
+              style={[styles.datePickerField, { flex: 1 }]}
+              onPress={() => setShowEventDatePicker(!showEventDatePicker)}
+              activeOpacity={0.7}
+            >
+              <Calendar size={16} color={COLORS.teal} />
+              <Text style={eventDate ? styles.datePickerText : styles.datePickerPlaceholder}>
+                {eventDate ? formatDateDisplay(eventDate) : "Select event date"}
+              </Text>
+            </TouchableOpacity>
+            {eventDate && (
+              <TouchableOpacity
+                style={styles.dateClearBtn}
+                onPress={() => { setEventDate(null); setShowEventDatePicker(false); }}
+              >
+                <X size={16} color={COLORS.creamMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+          {showEventDatePicker && (
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                value={eventDate || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(event, selectedDate) => {
+                  if (Platform.OS === "android") setShowEventDatePicker(false);
+                  if (event.type === "dismissed") return;
+                  if (selectedDate) setEventDate(selectedDate);
+                }}
+                textColor={COLORS.cream}
+                accentColor={COLORS.teal}
+                themeVariant="dark"
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowEventDatePicker(false)}>
+                  <Text style={styles.datePickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Pinned Toggle */}
           <View style={styles.switchRow}>
@@ -347,6 +392,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.cream,
+  },
+  dateFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  datePickerField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.charcoalMid,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.charcoalLight,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  datePickerText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: COLORS.cream,
+  },
+  datePickerPlaceholder: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: COLORS.creamMuted,
+  },
+  dateClearBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.charcoalLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  datePickerContainer: {
+    backgroundColor: COLORS.charcoalMid,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.charcoalLight,
+  },
+  datePickerDoneBtn: {
+    alignItems: "center",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.charcoalLight,
+  },
+  datePickerDoneText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.teal,
   },
   publishBtn: {
     backgroundColor: COLORS.teal,

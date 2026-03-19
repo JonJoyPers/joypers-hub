@@ -8,8 +8,10 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Calendar, Clock, ChevronDown, Plus, X } from "lucide-react-native";
 import { COLORS } from "../../theme/colors";
 import { useLeaveStore } from "../../store/leaveStore";
@@ -217,21 +219,52 @@ export default function LeaveScreen() {
   );
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDateDisplay(date) {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function formatDateISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function CreateLeaveModal({ visible, onClose, leaveTypes, onSubmit }) {
   const [leaveTypeId, setLeaveTypeId] = useState(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [hours, setHours] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   const insets = useSafeAreaInsets();
 
   const reset = () => {
     setLeaveTypeId(null);
-    setStartDate("");
-    setEndDate("");
+    setStartDate(null);
+    setEndDate(null);
     setHours("");
     setReason("");
+    setShowStartPicker(false);
+    setShowEndPicker(false);
+  };
+
+  const handleStartChange = (event, selectedDate) => {
+    if (Platform.OS === "android") setShowStartPicker(false);
+    if (event.type === "dismissed") return;
+    if (selectedDate) setStartDate(selectedDate);
+  };
+
+  const handleEndChange = (event, selectedDate) => {
+    if (Platform.OS === "android") setShowEndPicker(false);
+    if (event.type === "dismissed") return;
+    if (selectedDate) setEndDate(selectedDate);
   };
 
   const handleSubmit = async () => {
@@ -240,7 +273,13 @@ function CreateLeaveModal({ visible, onClose, leaveTypes, onSubmit }) {
       return;
     }
     setSubmitting(true);
-    await onSubmit({ leaveTypeId, startDate, endDate, hours: Number(hours), reason });
+    await onSubmit({
+      leaveTypeId,
+      startDate: formatDateISO(startDate),
+      endDate: formatDateISO(endDate),
+      hours: Number(hours),
+      reason,
+    });
     setSubmitting(false);
     reset();
   };
@@ -272,8 +311,69 @@ function CreateLeaveModal({ visible, onClose, leaveTypes, onSubmit }) {
             ))}
           </View>
 
-          <FormInput label="START DATE (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} placeholder="2025-03-10" />
-          <FormInput label="END DATE (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} placeholder="2025-03-12" />
+          {/* Start Date Picker */}
+          <Text style={styles.fieldLabel}>START DATE</Text>
+          <TouchableOpacity
+            style={styles.datePickerField}
+            onPress={() => { setShowStartPicker(!showStartPicker); setShowEndPicker(false); }}
+            activeOpacity={0.7}
+          >
+            <Calendar size={16} color={COLORS.teal} />
+            <Text style={startDate ? styles.datePickerText : styles.datePickerPlaceholder}>
+              {startDate ? formatDateDisplay(startDate) : "Select start date"}
+            </Text>
+          </TouchableOpacity>
+          {showStartPicker && (
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                value={startDate || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={handleStartChange}
+                textColor={COLORS.cream}
+                accentColor={COLORS.teal}
+                themeVariant="dark"
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowStartPicker(false)}>
+                  <Text style={styles.datePickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* End Date Picker */}
+          <Text style={styles.fieldLabel}>END DATE</Text>
+          <TouchableOpacity
+            style={styles.datePickerField}
+            onPress={() => { setShowEndPicker(!showEndPicker); setShowStartPicker(false); }}
+            activeOpacity={0.7}
+          >
+            <Calendar size={16} color={COLORS.teal} />
+            <Text style={endDate ? styles.datePickerText : styles.datePickerPlaceholder}>
+              {endDate ? formatDateDisplay(endDate) : "Select end date"}
+            </Text>
+          </TouchableOpacity>
+          {showEndPicker && (
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                value={endDate || startDate || new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={handleEndChange}
+                minimumDate={startDate || undefined}
+                textColor={COLORS.cream}
+                accentColor={COLORS.teal}
+                themeVariant="dark"
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity style={styles.datePickerDoneBtn} onPress={() => setShowEndPicker(false)}>
+                  <Text style={styles.datePickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           <FormInput label="HOURS" value={hours} onChangeText={setHours} placeholder="16" keyboardType="numeric" />
           <FormInput label="REASON (OPTIONAL)" value={reason} onChangeText={setReason} placeholder="Family vacation" multiline />
 
@@ -351,6 +451,47 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+
+  // Date picker
+  datePickerField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.charcoalMid,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.charcoalLight,
+  },
+  datePickerText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.cream,
+  },
+  datePickerPlaceholder: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.creamMuted + "60",
+  },
+  datePickerContainer: {
+    backgroundColor: COLORS.charcoalMid,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.charcoalLight,
+  },
+  datePickerDoneBtn: {
+    alignItems: "center",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.charcoalLight,
+  },
+  datePickerDoneText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.teal,
   },
 
   // Modal

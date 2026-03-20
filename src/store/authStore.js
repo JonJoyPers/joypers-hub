@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { supabase, isSupabaseConfigured } from "../services/supabase";
+import { supabase, isSupabaseConfigured, supabaseEdgeFunctionUrl, supabaseApiKey } from "../services/supabase";
 import {
   findUserByCredentials,
   findUserByPin,
@@ -138,14 +138,12 @@ export const useAuthStore = create((set, get) => ({
     // Call edge function for PIN login via raw fetch
     // (supabase.functions.invoke can hang in React Native)
     try {
-      const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-      const response = await fetch(`${url}/functions/v1/pin-login`, {
+      const response = await fetch(supabaseEdgeFunctionUrl("pin-login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`,
-          "apikey": key,
+          "Authorization": `Bearer ${supabaseApiKey}`,
+          "apikey": supabaseApiKey,
         },
         body: JSON.stringify({ pin }),
       });
@@ -209,14 +207,12 @@ export const useAuthStore = create((set, get) => ({
     // Handle PIN separately — must be bcrypt-hashed via edge function
     if (fields.pin) {
       try {
-        const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-        const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-        const resp = await fetch(`${url}/functions/v1/set-pin`, {
+        const resp = await fetch(supabaseEdgeFunctionUrl("set-pin"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${key}`,
-            "apikey": key,
+            "Authorization": `Bearer ${supabaseApiKey}`,
+            "apikey": supabaseApiKey,
           },
           body: JSON.stringify({ pin: fields.pin, employee_id: currentUser.id }),
         });

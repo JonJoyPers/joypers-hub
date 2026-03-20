@@ -67,3 +67,8 @@ try {
 export const isSupabaseConfigured = () => _clientReady;
 
 export const supabase = _supabase;
+
+// Expose raw URL/key for direct fetch calls (avoids supabase.functions.invoke issues)
+export const supabaseEdgeFunctionUrl = (fnName) =>
+  `${supabaseUrl || ""}/functions/v1/${fnName}`;
+export const supabaseApiKey = supabaseAnonKey || "";

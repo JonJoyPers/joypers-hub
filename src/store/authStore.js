@@ -135,17 +135,27 @@ export const useAuthStore = create((set, get) => ({
       return null;
     }
 
-    // Call edge function for PIN login
+    // Call edge function for PIN login via raw fetch
+    // (supabase.functions.invoke can hang in React Native)
     try {
-      const { data, error } = await supabase.functions.invoke("pin-login", {
-        body: { pin },
+      const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+      const response = await fetch(`${url}/functions/v1/pin-login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`,
+          "apikey": key,
+        },
+        body: JSON.stringify({ pin }),
       });
 
+      const data = await response.json();
       set({ loading: false });
 
-      if (error || !data?.user) {
-        console.warn("PIN login failed:", error?.message || "No user in response");
-        set({ loginError: "PIN not recognized." });
+      if (!response.ok || !data?.user) {
+        console.warn("PIN login failed:", data?.error || response.status);
+        set({ loginError: data?.error || "PIN not recognized." });
         return null;
       }
 
@@ -162,7 +172,7 @@ export const useAuthStore = create((set, get) => ({
       return data.user;
     } catch (e) {
       console.warn("PIN login error:", e);
-      set({ loading: false, loginError: "PIN login failed. Please try again." });
+      set({ loading: false, loginError: "Connection error. Please try again." });
       return null;
     }
   },
@@ -199,10 +209,21 @@ export const useAuthStore = create((set, get) => ({
     // Handle PIN separately — must be bcrypt-hashed via edge function
     if (fields.pin) {
       try {
-        const { error } = await supabase.functions.invoke("set-pin", {
-          body: { pin: fields.pin, employee_id: currentUser.id },
+        const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+        const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+        const resp = await fetch(`${url}/functions/v1/set-pin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${key}`,
+            "apikey": key,
+          },
+          body: JSON.stringify({ pin: fields.pin, employee_id: currentUser.id }),
         });
-        if (error) console.warn("Failed to set PIN:", error.message);
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          console.warn("Failed to set PIN:", err.error || resp.status);
+        }
       } catch (e) {
         console.warn("set-pin call failed:", e);
       }

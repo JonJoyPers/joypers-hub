@@ -136,28 +136,35 @@ export const useAuthStore = create((set, get) => ({
     }
 
     // Call edge function for PIN login
-    const { data, error } = await supabase.functions.invoke("pin-login", {
-      body: { pin },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke("pin-login", {
+        body: { pin },
+      });
 
-    set({ loading: false });
+      set({ loading: false });
 
-    if (error || !data?.user) {
-      set({ loginError: "PIN not recognized." });
+      if (error || !data?.user) {
+        console.warn("PIN login failed:", error?.message || "No user in response");
+        set({ loginError: "PIN not recognized." });
+        return null;
+      }
+
+      // Set the session from the edge function response
+      const session = data.session || data;
+      if (session.access_token) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
+
+      set({ user: data.user, loginMode: "kiosk" });
+      return data.user;
+    } catch (e) {
+      console.warn("PIN login error:", e);
+      set({ loading: false, loginError: "PIN login failed. Please try again." });
       return null;
     }
-
-    // Set the session from the edge function response
-    const session = data.session || data;
-    if (session.access_token) {
-      await supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      });
-    }
-
-    set({ user: data.user, loginMode: "kiosk" });
-    return data.user;
   },
 
   /**

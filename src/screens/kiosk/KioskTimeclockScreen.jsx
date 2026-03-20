@@ -90,11 +90,17 @@ export default function KioskTimeclockScreen() {
     setPin(newPin);
 
     if (newPin.length === 4) {
-      const user = await loginWithPin(newPin);
-      if (user) {
-        setIdentifiedUser(user);
-      } else {
-        Alert.alert("PIN Not Recognized", "Please try again.");
+      try {
+        const user = await loginWithPin(newPin);
+        if (user) {
+          setIdentifiedUser(user);
+        } else {
+          Alert.alert("PIN Not Recognized", "Please try again.");
+          setPin("");
+        }
+      } catch (e) {
+        console.warn("Kiosk PIN error:", e);
+        Alert.alert("Error", "Something went wrong. Please try again.");
         setPin("");
       }
     }

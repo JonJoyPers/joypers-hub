@@ -148,10 +148,11 @@ export const useAuthStore = create((set, get) => ({
     }
 
     // Set the session from the edge function response
-    if (data.access_token) {
+    const session = data.session || data;
+    if (session.access_token) {
       await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
       });
     }
 

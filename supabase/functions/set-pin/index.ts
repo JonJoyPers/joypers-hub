@@ -83,7 +83,7 @@ serve(async (req) => {
     }
 
     // Hash the PIN with bcrypt
-    const hashedPin = await bcrypt.hash(pin);
+    const hashedPin = bcrypt.hashSync(pin);
 
     // Save to employees table
     const { error } = await supabaseAdmin

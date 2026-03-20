@@ -39,7 +39,7 @@ serve(async (req) => {
     let matchedEmployee = null;
     for (const emp of employees || []) {
       if (!emp.pin) continue;
-      const matches = await bcrypt.compare(pin, emp.pin);
+      const matches = bcrypt.compareSync(pin, emp.pin);
       if (matches) {
         matchedEmployee = emp;
         break;
@@ -87,7 +87,7 @@ serve(async (req) => {
       department: matchedEmployee.department,
       title: matchedEmployee.title,
       avatar: matchedEmployee.avatar_url,
-      tags: matchedEmployee.worker_type === "remote" ? ["Remote"] : [],
+      tags: matchedEmployee.worker_type === "remote" || matchedEmployee.worker_type === "both" ? ["Remote"] : [],
     };
 
     return new Response(

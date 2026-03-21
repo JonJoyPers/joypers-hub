@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import {
   LogIn,
@@ -40,6 +41,7 @@ function formatTime(time24) {
 export default function KioskTimeclockScreen() {
   const [pin, setPin] = useState("");
   const [identifiedUser, setIdentifiedUser] = useState(null);
+  const [pinLoading, setPinLoading] = useState(false);
   const [now, setNow] = useState(new Date());
   const timeoutRef = useRef(null);
 
@@ -85,13 +87,21 @@ export default function KioskTimeclockScreen() {
 
   // PIN pad handlers
   const handleDigit = async (digit) => {
-    if (pin.length >= 4) return;
+    if (pin.length >= 4 || pinLoading) return;
     const newPin = pin + digit;
     setPin(newPin);
 
     if (newPin.length === 4) {
+      setPinLoading(true);
       try {
-        const user = await loginWithPin(newPin);
+        // Race the login against a 10-second timeout
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timed out")), 10000)
+        );
+        const user = await Promise.race([
+          loginWithPin(newPin),
+          timeoutPromise,
+        ]);
         if (user) {
           setIdentifiedUser(user);
         } else {
@@ -100,8 +110,10 @@ export default function KioskTimeclockScreen() {
         }
       } catch (e) {
         console.warn("Kiosk PIN error:", e);
-        Alert.alert("Error", "Something went wrong. Please try again.");
+        Alert.alert("Error", e.message || "Something went wrong. Please try again.");
         setPin("");
+      } finally {
+        setPinLoading(false);
       }
     }
   };
@@ -189,6 +201,13 @@ export default function KioskTimeclockScreen() {
               />
             ))}
           </View>
+
+          {pinLoading && (
+            <View style={{ alignItems: "center", marginBottom: 16 }}>
+              <ActivityIndicator size="large" color={COLORS.teal} />
+              <Text style={{ color: COLORS.creamMuted, fontSize: 12, marginTop: 8 }}>Verifying PIN...</Text>
+            </View>
+          )}
 
           <View style={styles.numGrid}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (

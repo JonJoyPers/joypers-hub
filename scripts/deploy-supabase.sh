@@ -47,6 +47,7 @@ if [[ "$MODE" == "all" || "$MODE" == "--functions-only" ]]; then
 
   FUNCTIONS=(
     "pin-login"
+    "kiosk-punch"
     "approve-leave"
     "accrue-leave"
     "create-employee"

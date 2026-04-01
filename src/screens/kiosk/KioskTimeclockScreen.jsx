@@ -20,6 +20,11 @@ import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
 import { useTimeclockStore } from "../../store/timeclockStore";
 import { useScheduleStore } from "../../store/scheduleStore";
+import {
+  supabaseEdgeFunctionUrl,
+  supabaseApiKey,
+  isSupabaseConfigured,
+} from "../../services/supabase";
 
 const AUTO_RETURN_MS = 30000;
 
@@ -48,14 +53,10 @@ export default function KioskTimeclockScreen() {
   const loginWithPin = useAuthStore((s) => s.loginWithPin);
   const setKioskMode = useAppStore((s) => s.setKioskMode);
   const {
-    clockIn,
-    clockOut,
-    startBreak,
-    endBreak,
-    startLunch,
-    endLunch,
+    addLocalPunch,
     currentStatus,
     getTodayHours,
+    fetchPunches,
   } = useTimeclockStore();
   const getShiftsForDate = useScheduleStore((s) => s.getShiftsForDate);
 
@@ -96,7 +97,7 @@ export default function KioskTimeclockScreen() {
       try {
         // Race the login against a 10-second timeout
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Request timed out")), 10000)
+          setTimeout(() => reject(new Error("Request timed out")), 30000)
         );
         const user = await Promise.race([
           loginWithPin(newPin),
@@ -104,6 +105,29 @@ export default function KioskTimeclockScreen() {
         ]);
         if (user) {
           setIdentifiedUser(user);
+          // Fetch today's punches so currentStatus is accurate
+          if (isSupabaseConfigured()) {
+            try {
+              const resp = await fetch(supabaseEdgeFunctionUrl("kiosk-punch"), {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${supabaseApiKey}`,
+                  apikey: supabaseApiKey,
+                },
+                body: JSON.stringify({
+                  action: "status",
+                  employee_id: user.id,
+                }),
+              });
+              const statusData = await resp.json();
+              if (resp.ok && statusData.punches) {
+                statusData.punches.forEach((p) => addLocalPunch(p));
+              }
+            } catch (e) {
+              console.warn("Failed to fetch kiosk status:", e);
+            }
+          }
         } else {
           Alert.alert("PIN Not Recognized", "Please try again.");
           setPin("");
@@ -123,32 +147,73 @@ export default function KioskTimeclockScreen() {
   };
 
   // Action handler
-  const handleAction = (action) => {
-    if (!identifiedUser) return;
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const ACTION_TO_TYPE = {
+    clockIn: "clock_in",
+    clockOut: "clock_out",
+    startBreak: "break_start",
+    endBreak: "break_end",
+    startLunch: "lunch_start",
+    endLunch: "lunch_end",
+  };
+
+  const ACTION_LABELS = {
+    clockIn: "Clock In",
+    clockOut: "Clock Out",
+    startBreak: "Start Break",
+    endBreak: "End Break",
+    startLunch: "Start Lunch",
+    endLunch: "End Lunch",
+  };
+
+  const handleAction = async (action) => {
+    if (!identifiedUser || actionLoading) return;
     resetTimeout();
+    setActionLoading(true);
 
     const userId = identifiedUser.id;
-    const labels = {
-      clockIn: "Clock In",
-      clockOut: "Clock Out",
-      startBreak: "Start Break",
-      endBreak: "End Break",
-      startLunch: "Start Lunch",
-      endLunch: "End Lunch",
-    };
+    const punchType = ACTION_TO_TYPE[action];
+    const timestamp = new Date().toISOString();
 
-    if (action === "clockIn") clockIn(userId);
-    else if (action === "clockOut") clockOut(userId);
-    else if (action === "startBreak") startBreak(userId);
-    else if (action === "endBreak") endBreak(userId);
-    else if (action === "startLunch") startLunch(userId);
-    else if (action === "endLunch") endLunch(userId);
+    try {
+      const response = await fetch(supabaseEdgeFunctionUrl("kiosk-punch"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseApiKey}`,
+          apikey: supabaseApiKey,
+        },
+        body: JSON.stringify({
+          employee_id: userId,
+          type: punchType,
+          timestamp,
+        }),
+      });
 
-    Alert.alert(
-      "Confirmed",
-      `${identifiedUser.firstName}: ${labels[action]} at ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
-      [{ text: "OK", onPress: returnToPinPad }]
-    );
+      const data = await response.json();
+
+      if (!response.ok || !data.punch) {
+        throw new Error(data.error || "Failed to record punch");
+      }
+
+      // Update local store so status/hours reflect immediately
+      addLocalPunch(data.punch);
+
+      Alert.alert(
+        "Confirmed",
+        `${identifiedUser.firstName}: ${ACTION_LABELS[action]} at ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
+        [{ text: "OK", onPress: returnToPinPad }]
+      );
+    } catch (e) {
+      console.warn("Kiosk punch error:", e);
+      Alert.alert(
+        "Error",
+        e.message || "Failed to record punch. Please try again."
+      );
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Today's schedule for identified user
@@ -343,78 +408,87 @@ export default function KioskTimeclockScreen() {
 
         {/* Action Buttons */}
         <View style={styles.kioskActions}>
-          {status === "clocked_out" && (
-            <TouchableOpacity
-              style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
-              onPress={() => handleAction("clockIn")}
-              activeOpacity={0.7}
-            >
-              <LogIn size={36} color={COLORS.charcoal} strokeWidth={2.5} />
-              <Text style={styles.kioskActionBtnText}>CLOCK IN</Text>
-            </TouchableOpacity>
-          )}
-          {status === "clocked_in" && (
+          {actionLoading ? (
+            <View style={styles.kioskActionLoading}>
+              <ActivityIndicator size="large" color={COLORS.teal} />
+              <Text style={{ color: COLORS.creamMuted, fontSize: 12, marginTop: 8 }}>Recording...</Text>
+            </View>
+          ) : (
             <>
-              <TouchableOpacity
-                style={[
-                  styles.kioskActionBtn,
-                  { backgroundColor: COLORS.amber },
-                ]}
-                onPress={() => handleAction("startBreak")}
-                activeOpacity={0.7}
-              >
-                <Coffee size={32} color={COLORS.charcoal} strokeWidth={2.5} />
-                <Text style={styles.kioskActionBtnText}>BREAK</Text>
-                <Text style={styles.kioskActionSubtext}>(Paid)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.kioskActionBtn,
-                  { backgroundColor: COLORS.violet },
-                ]}
-                onPress={() => handleAction("startLunch")}
-                activeOpacity={0.7}
-              >
-                <Utensils size={32} color={COLORS.charcoal} strokeWidth={2.5} />
-                <Text style={styles.kioskActionBtnText}>LUNCH</Text>
-                <Text style={styles.kioskActionSubtext}>(Unpaid)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.kioskActionBtn,
-                  { backgroundColor: COLORS.red },
-                ]}
-                onPress={() => handleAction("clockOut")}
-                activeOpacity={0.7}
-              >
-                <LogOut size={36} color={COLORS.cream} strokeWidth={2.5} />
-                <Text
-                  style={[styles.kioskActionBtnText, { color: COLORS.cream }]}
+              {status === "clocked_out" && (
+                <TouchableOpacity
+                  style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
+                  onPress={() => handleAction("clockIn")}
+                  activeOpacity={0.7}
                 >
-                  CLOCK OUT
-                </Text>
-              </TouchableOpacity>
+                  <LogIn size={36} color={COLORS.charcoal} strokeWidth={2.5} />
+                  <Text style={styles.kioskActionBtnText}>CLOCK IN</Text>
+                </TouchableOpacity>
+              )}
+              {status === "clocked_in" && (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.kioskActionBtn,
+                      { backgroundColor: COLORS.amber },
+                    ]}
+                    onPress={() => handleAction("startBreak")}
+                    activeOpacity={0.7}
+                  >
+                    <Coffee size={32} color={COLORS.charcoal} strokeWidth={2.5} />
+                    <Text style={styles.kioskActionBtnText}>BREAK</Text>
+                    <Text style={styles.kioskActionSubtext}>(Paid)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.kioskActionBtn,
+                      { backgroundColor: COLORS.violet },
+                    ]}
+                    onPress={() => handleAction("startLunch")}
+                    activeOpacity={0.7}
+                  >
+                    <Utensils size={32} color={COLORS.charcoal} strokeWidth={2.5} />
+                    <Text style={styles.kioskActionBtnText}>LUNCH</Text>
+                    <Text style={styles.kioskActionSubtext}>(Unpaid)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.kioskActionBtn,
+                      { backgroundColor: COLORS.red },
+                    ]}
+                    onPress={() => handleAction("clockOut")}
+                    activeOpacity={0.7}
+                  >
+                    <LogOut size={36} color={COLORS.cream} strokeWidth={2.5} />
+                    <Text
+                      style={[styles.kioskActionBtnText, { color: COLORS.cream }]}
+                    >
+                      CLOCK OUT
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {status === "on_break" && (
+                <TouchableOpacity
+                  style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
+                  onPress={() => handleAction("endBreak")}
+                  activeOpacity={0.7}
+                >
+                  <LogIn size={36} color={COLORS.charcoal} strokeWidth={2.5} />
+                  <Text style={styles.kioskActionBtnText}>END BREAK</Text>
+                </TouchableOpacity>
+              )}
+              {status === "on_lunch" && (
+                <TouchableOpacity
+                  style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
+                  onPress={() => handleAction("endLunch")}
+                  activeOpacity={0.7}
+                >
+                  <Utensils size={32} color={COLORS.charcoal} strokeWidth={2.5} />
+                  <Text style={styles.kioskActionBtnText}>END LUNCH</Text>
+                </TouchableOpacity>
+              )}
             </>
-          )}
-          {status === "on_break" && (
-            <TouchableOpacity
-              style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
-              onPress={() => handleAction("endBreak")}
-              activeOpacity={0.7}
-            >
-              <LogIn size={36} color={COLORS.charcoal} strokeWidth={2.5} />
-              <Text style={styles.kioskActionBtnText}>END BREAK</Text>
-            </TouchableOpacity>
-          )}
-          {status === "on_lunch" && (
-            <TouchableOpacity
-              style={[styles.kioskActionBtn, { backgroundColor: COLORS.green }]}
-              onPress={() => handleAction("endLunch")}
-              activeOpacity={0.7}
-            >
-              <Utensils size={32} color={COLORS.charcoal} strokeWidth={2.5} />
-              <Text style={styles.kioskActionBtnText}>END LUNCH</Text>
-            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -625,6 +699,12 @@ const styles = StyleSheet.create({
     gap: 16,
     justifyContent: "center",
     flexWrap: "wrap",
+  },
+  kioskActionLoading: {
+    height: 140,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   kioskActionBtn: {
     width: 180,

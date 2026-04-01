@@ -162,7 +162,7 @@ export const useAuthStore = create((set, get) => ({
       if (session.access_token) {
         await supabase.auth.setSession({
           access_token: session.access_token,
-          refresh_token: session.refresh_token,
+          refresh_token: session.refresh_token || "",
         });
       }
 

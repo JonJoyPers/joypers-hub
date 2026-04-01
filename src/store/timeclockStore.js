@@ -92,6 +92,17 @@ export const useTimeclockStore = create((set, get) => ({
     return Math.round(total * 10) / 10;
   },
 
+  /**
+   * Add a punch directly to the local store (used by kiosk after edge function insert).
+   */
+  addLocalPunch: (dbRow) => {
+    const punch = mapPunchFromDb(dbRow);
+    set((s) => {
+      if (s.punches.some((p) => p.id === punch.id)) return s;
+      return { punches: [punch, ...s.punches] };
+    });
+  },
+
   clockIn: async (userId, photoUri = null, location = null) => {
     return get()._addPunch(userId, "clock_in", photoUri, null, location);
   },

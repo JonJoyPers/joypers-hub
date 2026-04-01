@@ -64,6 +64,13 @@
       "when": 1772739670804,
       "tag": "0008_push_tokens_updated_at",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774310400000,
+      "tag": "0009_verify_pin_function",
+      "breakpoints": true
     }
   ]
 }

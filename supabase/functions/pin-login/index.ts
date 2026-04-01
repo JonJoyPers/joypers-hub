@@ -1,11 +1,36 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Create a JWT using Web Crypto (built into Deno — no external deps)
+function base64url(data: ArrayBuffer | string): string {
+  const str = typeof data === "string"
+    ? btoa(data)
+    : btoa(String.fromCharCode(...new Uint8Array(data)));
+  return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+async function signJwt(
+  payload: Record<string, unknown>,
+  secret: string
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = base64url(JSON.stringify(payload));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(`${header}.${body}`));
+  return `${header}.${body}.${base64url(sig)}`;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,25 +51,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch all active employees with PINs
-    const { data: employees, error } = await supabaseAdmin
-      .from("employees")
-      .select("id, name, first_name, email, role, department, title, worker_type, avatar_url, pin")
-      .eq("is_active", true)
-      .not("pin", "is", null);
+    // Use PostgreSQL's pgcrypto to verify the bcrypt PIN in compiled C
+    // (much faster than the pure-JS bcrypt that runs in Deno edge functions)
+    const { data: matchedEmployee, error } = await supabaseAdmin
+      .rpc("verify_employee_pin", { p_pin: pin });
 
     if (error) throw error;
-
-    // Find matching employee by comparing hashed PIN
-    let matchedEmployee = null;
-    for (const emp of employees || []) {
-      if (!emp.pin) continue;
-      const matches = bcrypt.compareSync(pin, emp.pin);
-      if (matches) {
-        matchedEmployee = emp;
-        break;
-      }
-    }
 
     if (!matchedEmployee) {
       return new Response(
@@ -53,30 +65,25 @@ serve(async (req) => {
       );
     }
 
-    // Generate a magic link and extract the token to create a real session
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email: matchedEmployee.email,
-    });
-
-    if (linkError || !linkData) {
-      throw new Error(linkError?.message || "Failed to generate auth link");
+    // Employee ID = Auth user ID (set at creation time in create-employee).
+    // Sign a JWT locally instead of the slow generateLink + verifyOtp round-trips.
+    const jwtSecret = Deno.env.get("APP_JWT_SECRET");
+    if (!jwtSecret) {
+      throw new Error("APP_JWT_SECRET not configured");
     }
 
-    // Extract the token hash from the generated link and verify OTP to get a session
-    const token = linkData.properties?.hashed_token;
-    if (!token) {
-      throw new Error("Failed to extract auth token");
-    }
-
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.verifyOtp({
-      type: "magiclink",
-      token_hash: token,
-    });
-
-    if (sessionError || !sessionData.session) {
-      throw new Error(sessionError?.message || "Failed to create session");
-    }
+    const now = Math.floor(Date.now() / 1000);
+    const accessToken = await signJwt(
+      {
+        aud: "authenticated",
+        exp: now + 3600,
+        sub: matchedEmployee.id,
+        email: matchedEmployee.email,
+        role: "authenticated",
+        iat: now,
+      },
+      jwtSecret
+    );
 
     const user = {
       id: matchedEmployee.id,
@@ -94,9 +101,9 @@ serve(async (req) => {
       JSON.stringify({
         user,
         session: {
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token,
-          expires_in: sessionData.session.expires_in,
+          access_token: accessToken,
+          refresh_token: null,
+          expires_in: 3600,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -25,6 +25,7 @@ jobs:
       - name: Deploy functions
         run: |
           supabase functions deploy pin-login --no-verify-jwt
+          supabase functions deploy kiosk-punch --no-verify-jwt
           supabase functions deploy approve-leave --no-verify-jwt
           supabase functions deploy accrue-leave --no-verify-jwt
           supabase functions deploy create-employee --no-verify-jwt

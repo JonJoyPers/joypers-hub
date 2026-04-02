@@ -26,10 +26,14 @@
       }
     },
     "testflight": {
+      "autoIncrement": true,
       "distribution": "store",
       "credentialsSource": "remote",
       "ios": {
         "buildConfiguration": "Release"
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
@@ -56,6 +60,9 @@
         "serviceAccountKeyPath": "./google-services.json",
         "track": "internal"
       }
+    },
+    "testflight": {
+      "extends": "production"
     }
   }
 }

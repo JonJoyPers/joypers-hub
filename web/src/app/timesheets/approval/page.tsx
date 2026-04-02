@@ -67,6 +67,12 @@ function fmtTimeFull(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 
+/** Convert ISO timestamp to HH:MM for <input type="time"> */
+function toLocalTimeInput(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 const statusStyles: Record<string, string> = {
   pending: "bg-amber/20 text-amber",
   approved: "bg-green/20 text-green",
@@ -140,6 +146,13 @@ export default function TimesheetApprovalPage() {
   const [approving, setApproving] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editClockIn, setEditClockIn] = useState("");
+  const [editClockOut, setEditClockOut] = useState("");
+  const [editBreak, setEditBreak] = useState("");
+  const [editLunch, setEditLunch] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   const presets = getPresets();
 
@@ -459,7 +472,19 @@ export default function TimesheetApprovalPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  {selectedTimesheet.status === "pending" && (
+                  {selectedTimesheet.status !== "exported" && !editing && (
+                    <button onClick={() => {
+                      setEditing(true);
+                      setEditClockIn(selectedTimesheet.clock_in ? toLocalTimeInput(selectedTimesheet.clock_in) : "");
+                      setEditClockOut(selectedTimesheet.clock_out ? toLocalTimeInput(selectedTimesheet.clock_out) : "");
+                      setEditBreak(String(selectedTimesheet.break_minutes || 0));
+                      setEditLunch(String(selectedTimesheet.lunch_minutes || 0));
+                      setEditNote("");
+                    }}
+                      className="px-4 py-1.5 bg-charcoal-light text-cream rounded-lg text-xs font-bold"
+                    >Adjust</button>
+                  )}
+                  {selectedTimesheet.status === "pending" && !editing && (
                     <>
                       <button onClick={() => handleApprove("approve", [selectedTimesheet.id])} disabled={approving}
                         className="px-4 py-1.5 bg-green text-charcoal rounded-lg text-xs font-bold disabled:opacity-50"
@@ -469,7 +494,7 @@ export default function TimesheetApprovalPage() {
                       >Dispute</button>
                     </>
                   )}
-                  {selectedTimesheet.status === "approved" && (
+                  {selectedTimesheet.status === "approved" && !editing && (
                     <button onClick={() => handleApprove("unapprove", [selectedTimesheet.id])} disabled={approving}
                       className="px-4 py-1.5 bg-amber/20 text-amber rounded-lg text-xs font-bold disabled:opacity-50"
                     >Unapprove</button>
@@ -480,62 +505,136 @@ export default function TimesheetApprovalPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Time</p>
-                  <p className="text-cream text-sm font-medium">
-                    {fmtTime(selectedTimesheet.clock_in)} – {fmtTime(selectedTimesheet.clock_out)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Worked</p>
-                  <p className="text-teal text-sm font-bold">{fmtHoursDecimal(selectedTimesheet.worked_minutes)} hrs</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Break Summary</p>
-                  <p className="text-cream text-sm">
-                    {selectedTimesheet.lunch_minutes > 0 && `Lunch: ${selectedTimesheet.lunch_minutes}m`}
-                    {selectedTimesheet.lunch_minutes > 0 && selectedTimesheet.break_minutes > 0 && " · "}
-                    {selectedTimesheet.break_minutes > 0 && `Break: ${selectedTimesheet.break_minutes}m`}
-                    {selectedTimesheet.lunch_minutes === 0 && selectedTimesheet.break_minutes === 0 && "None"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Pay</p>
-                  <p className="text-cream text-sm">
-                    {selectedTimesheet.pay_rate_snapshot
-                      ? `$${parseFloat(selectedTimesheet.pay_rate_snapshot).toFixed(2)}/hr`
-                      : "—"
-                    }
-                    {selectedTimesheet.pay_amount && (
-                      <span className="text-teal font-bold ml-2">${parseFloat(selectedTimesheet.pay_amount).toFixed(2)}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Punch details */}
-              {detailPunches.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-2">Punch Details</p>
-                  <div className="space-y-1">
-                    {detailPunches.map((p) => (
-                      <div key={p.id} className="flex items-center gap-3 text-sm">
-                        <span className={`text-xs font-medium w-24 ${punchTypeColors[p.type] || "text-cream-muted"}`}>
-                          {punchTypeLabels[p.type] || p.type}
-                        </span>
-                        <span className="text-cream">{fmtTimeFull(p.timestamp)}</span>
-                        {p.note && <span className="text-cream-muted text-xs">— {p.note}</span>}
-                      </div>
-                    ))}
+              {/* ── Edit Mode ── */}
+              {editing ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Clock In</label>
+                      <input type="time" value={editClockIn} onChange={(e) => setEditClockIn(e.target.value)}
+                        className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Clock Out</label>
+                      <input type="time" value={editClockOut} onChange={(e) => setEditClockOut(e.target.value)}
+                        className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Break (min)</label>
+                      <input type="number" min="0" value={editBreak} onChange={(e) => setEditBreak(e.target.value)}
+                        className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Lunch (min)</label>
+                      <input type="number" min="0" value={editLunch} onChange={(e) => setEditLunch(e.target.value)}
+                        className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Reason for adjustment</label>
+                    <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)}
+                      placeholder="e.g. Forgot to clock out, adjusted to actual departure time"
+                      className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm placeholder:text-charcoal-light"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={async () => {
+                      setSaving(true);
+                      const { data: { session } } = await supabase.auth.getSession();
+                      // Build ISO timestamps from the date + time inputs
+                      const clockIn = editClockIn ? `${selectedTimesheet.date}T${editClockIn}:00` : undefined;
+                      const clockOut = editClockOut ? `${selectedTimesheet.date}T${editClockOut}:00` : undefined;
+                      await fetch("/api/timesheets/adjust", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${session?.access_token}`,
+                        },
+                        body: JSON.stringify({
+                          timesheet_id: selectedTimesheet.id,
+                          clock_in: clockIn,
+                          clock_out: clockOut,
+                          break_minutes: editBreak,
+                          lunch_minutes: editLunch,
+                          note: editNote || undefined,
+                        }),
+                      });
+                      await fetchTimesheets();
+                      setEditing(false);
+                      setSaving(false);
+                    }} disabled={saving}
+                      className="px-4 py-1.5 bg-teal text-charcoal rounded-lg text-xs font-bold disabled:opacity-50"
+                    >{saving ? "Saving…" : "Save Adjustment"}</button>
+                    <button onClick={() => setEditing(false)}
+                      className="px-4 py-1.5 bg-charcoal-light text-cream-muted rounded-lg text-xs font-bold"
+                    >Cancel</button>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* ── Read-only summary ── */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Time</p>
+                      <p className="text-cream text-sm font-medium">
+                        {fmtTime(selectedTimesheet.clock_in)} – {fmtTime(selectedTimesheet.clock_out)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Worked</p>
+                      <p className="text-teal text-sm font-bold">{fmtHoursDecimal(selectedTimesheet.worked_minutes)} hrs</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Break Summary</p>
+                      <p className="text-cream text-sm">
+                        {selectedTimesheet.lunch_minutes > 0 && `Lunch: ${selectedTimesheet.lunch_minutes}m`}
+                        {selectedTimesheet.lunch_minutes > 0 && selectedTimesheet.break_minutes > 0 && " · "}
+                        {selectedTimesheet.break_minutes > 0 && `Break: ${selectedTimesheet.break_minutes}m`}
+                        {selectedTimesheet.lunch_minutes === 0 && selectedTimesheet.break_minutes === 0 && "None"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Pay</p>
+                      <p className="text-cream text-sm">
+                        {selectedTimesheet.pay_rate_snapshot
+                          ? `$${parseFloat(selectedTimesheet.pay_rate_snapshot).toFixed(2)}/hr`
+                          : "—"
+                        }
+                        {selectedTimesheet.pay_amount && (
+                          <span className="text-teal font-bold ml-2">${parseFloat(selectedTimesheet.pay_amount).toFixed(2)}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Punch details */}
+                  {detailPunches.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-2">Punch Details</p>
+                      <div className="space-y-1">
+                        {detailPunches.map((p) => (
+                          <div key={p.id} className="flex items-center gap-3 text-sm">
+                            <span className={`text-xs font-medium w-24 ${punchTypeColors[p.type] || "text-cream-muted"}`}>
+                              {punchTypeLabels[p.type] || p.type}
+                            </span>
+                            <span className="text-cream">{fmtTimeFull(p.timestamp)}</span>
+                            {p.note && <span className="text-cream-muted text-xs">— {p.note}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {selectedTimesheet.manager_note && (
+              {selectedTimesheet.manager_note && !editing && (
                 <div className="mt-3 p-3 bg-charcoal-light/30 rounded-lg">
                   <p className="text-[10px] text-cream-muted uppercase tracking-wider mb-1">Manager Note</p>
-                  <p className="text-cream text-sm">{selectedTimesheet.manager_note}</p>
+                  <p className="text-cream text-sm whitespace-pre-line">{selectedTimesheet.manager_note}</p>
                 </div>
               )}
             </div>

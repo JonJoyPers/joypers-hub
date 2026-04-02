@@ -113,7 +113,13 @@ function getPresets(): { label: string; start: string; end: string }[] {
   const twoWeeksAgo = new Date(mon);
   twoWeeksAgo.setDate(mon.getDate() - 14);
 
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
   return [
+    { label: "This Month", start: fmt(monthStart), end: fmt(today) },
+    { label: "Last Month", start: fmt(lastMonthStart), end: fmt(lastMonthEnd) },
     { label: "This Week", start: fmt(mon), end: fmt(sun) },
     { label: "Last Week", start: fmt(lastMon), end: fmt(lastSun) },
     { label: "Last 2 Weeks", start: fmt(twoWeeksAgo), end: fmt(lastSun) },
@@ -127,16 +133,9 @@ export default function TimesheetApprovalPage() {
   const [rebuilding, setRebuilding] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
-  const defaultStart = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7);
-    return d.toISOString().split("T")[0];
-  })();
-  const defaultEnd = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 1);
-    return d.toISOString().split("T")[0];
-  })();
+  // Default to 1st of current month through today
+  const defaultStart = today.slice(0, 8) + "01";
+  const defaultEnd = today;
 
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);

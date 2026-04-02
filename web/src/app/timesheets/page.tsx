@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
+import TimesheetTabs from "./TimesheetTabs";
 
 interface Punch {
   id: number;
@@ -322,8 +323,9 @@ export default function TimesheetsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-cream">Timesheets</h2>
+      <TimesheetTabs />
+
+      <div className="flex items-center justify-end mb-4">
         <button onClick={exportCSV} className="px-4 py-1.5 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">
           Export CSV
         </button>

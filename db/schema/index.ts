@@ -2,6 +2,7 @@ export * from './locations';
 export * from './employees';
 export * from './shifts';
 export * from './timesheets';
+export * from './timesheetApprovals';
 export * from './leave';
 export * from './bulletin';
 export * from './messages';

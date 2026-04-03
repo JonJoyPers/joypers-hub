@@ -159,7 +159,7 @@ export default function TimesheetApprovalPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("timesheets")
-      .select("*, employee:employees(name, title, pay_rate)")
+      .select("*, employee:employees!timesheets_employee_id_fkey(name, title, pay_rate)")
       .gte("date", startDate)
       .lte("date", endDate)
       .order("date", { ascending: true });

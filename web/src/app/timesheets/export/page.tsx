@@ -101,7 +101,7 @@ export default function TimesheetExportPage() {
     setLoading(true);
     const { data } = await supabase
       .from("timesheets")
-      .select("*, employee:employees(name, title, pay_rate)")
+      .select("*, employee:employees!timesheets_employee_id_fkey(name, title, pay_rate)")
       .gte("date", startDate)
       .lte("date", endDate)
       .in("status", ["approved", "exported"])

@@ -157,12 +157,17 @@ export default function TimesheetApprovalPage() {
 
   async function fetchTimesheets() {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("timesheets")
       .select("*, employee:employees(name, title, pay_rate)")
       .gte("date", startDate)
       .lte("date", endDate)
       .order("date", { ascending: true });
+
+    if (error) {
+      console.error("Timesheets fetch error:", error);
+    }
+    console.log("Timesheets query:", { startDate, endDate, count: data?.length, error });
 
     setTimesheets(data || []);
     setLoading(false);

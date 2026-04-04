@@ -39,6 +39,7 @@ interface EmployeeSummary {
   pendingCount: number;
   totalHours: number;
   timesheets: Timesheet[];
+  isLive: boolean;
 }
 
 function fmtTime(iso: string | null): string {
@@ -288,12 +289,14 @@ export default function TimesheetApprovalPage() {
           pendingCount: 0,
           totalHours: 0,
           timesheets: [],
+          isLive: false,
         });
       }
       const emp = map.get(ts.employee_id)!;
       emp.sheetCount++;
       if (ts.status === "pending") emp.pendingCount++;
       emp.totalHours += (ts.worked_minutes || 0) / 60;
+      if (ts.has_open_punch) emp.isLive = true;
       emp.timesheets.push(ts);
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -459,7 +462,12 @@ export default function TimesheetApprovalPage() {
                     {initials(emp.name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-cream text-sm font-medium truncate">{emp.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-cream text-sm font-medium truncate">{emp.name}</p>
+                      {emp.isLive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse flex-shrink-0" title="Currently clocked in" />
+                      )}
+                    </div>
                     <p className="text-cream-muted text-[10px]">
                       {emp.sheetCount} sheets · {fmtHoursDecimal(emp.totalHours * 60)} hrs
                     </p>
@@ -558,7 +566,10 @@ export default function TimesheetApprovalPage() {
                             <td className="px-3 py-2.5">
                               <span className="text-cream text-sm font-medium">{fmtDate(ts.date)}</span>
                               {ts.has_open_punch && (
-                                <span className="ml-2 text-amber text-[10px]" title="Missing clock out">⚠</span>
+                                <span className="ml-2 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
+                                  <span className="text-green text-[9px] font-bold uppercase tracking-wider" title="Still clocked in">Live</span>
+                                </span>
                               )}
                             </td>
                             <td className="px-3 py-2.5">

@@ -48,19 +48,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Employee not found or inactive" }, { status: 404 });
   }
 
-  // Calculate worked minutes
+  // Calculate worked minutes — clock_in/clock_out are full ISO strings from client
   const breakMins = Math.max(0, parseInt(break_minutes) || 0);
   const lunchMins = Math.max(0, parseInt(lunch_minutes) || 0);
   let workedMinutes = 0;
-  let clockInIso: string | null = null;
-  let clockOutIso: string | null = null;
-
-  if (clock_in) {
-    clockInIso = `${date}T${clock_in}:00`;
-  }
-  if (clock_out) {
-    clockOutIso = `${date}T${clock_out}:00`;
-  }
+  const clockInIso: string | null = clock_in || null;
+  const clockOutIso: string | null = clock_out || null;
 
   if (clockInIso && clockOutIso) {
     const inMs = new Date(clockInIso).getTime();

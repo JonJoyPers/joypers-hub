@@ -226,7 +226,28 @@ export default function TimesheetApprovalPage() {
   }
 
   useEffect(() => {
-    fetchTimesheets();
+    const todayStr = new Date().toISOString().split("T")[0];
+    const includesToday = startDate <= todayStr && endDate >= todayStr;
+
+    async function refreshData() {
+      if (includesToday) {
+        // Rebuild today first so live clock-ins appear
+        await fetch("/api/timesheets/rebuild", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start: todayStr, end: todayStr }),
+        });
+      }
+      await fetchTimesheets();
+    }
+
+    refreshData();
+
+    // Auto-refresh every 30s if viewing today
+    if (includesToday) {
+      const interval = setInterval(refreshData, 30000);
+      return () => clearInterval(interval);
+    }
   }, [startDate, endDate]);
 
   useEffect(() => {
@@ -248,8 +269,9 @@ export default function TimesheetApprovalPage() {
       body: JSON.stringify({
         employee_id: createEmpId,
         date: createDate,
-        clock_in: createClockIn,
-        clock_out: createClockOut,
+        // Convert local time to UTC ISO by creating Date in browser's TZ
+        clock_in: createClockIn ? new Date(`${createDate}T${createClockIn}`).toISOString() : undefined,
+        clock_out: createClockOut ? new Date(`${createDate}T${createClockOut}`).toISOString() : undefined,
         break_minutes: createBreak,
         lunch_minutes: createLunch,
         note: createNote || undefined,
@@ -694,9 +716,9 @@ export default function TimesheetApprovalPage() {
                     <button onClick={async () => {
                       setSaving(true);
                       const { data: { session } } = await supabase.auth.getSession();
-                      // Build ISO timestamps from the date + time inputs
-                      const clockIn = editClockIn ? `${selectedTimesheet.date}T${editClockIn}:00` : undefined;
-                      const clockOut = editClockOut ? `${selectedTimesheet.date}T${editClockOut}:00` : undefined;
+                      // Build ISO timestamps — convert local time to UTC
+                      const clockIn = editClockIn ? new Date(`${selectedTimesheet.date}T${editClockIn}`).toISOString() : undefined;
+                      const clockOut = editClockOut ? new Date(`${selectedTimesheet.date}T${editClockOut}`).toISOString() : undefined;
                       await fetch("/api/timesheets/adjust", {
                         method: "POST",
                         headers: {

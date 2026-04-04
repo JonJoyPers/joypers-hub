@@ -153,6 +153,18 @@ export default function TimesheetApprovalPage() {
   const [editLunch, setEditLunch] = useState("");
   const [editNote, setEditNote] = useState("");
 
+  // Create modal state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createEmpId, setCreateEmpId] = useState("");
+  const [createDate, setCreateDate] = useState(new Date().toISOString().split("T")[0]);
+  const [createClockIn, setCreateClockIn] = useState("09:00");
+  const [createClockOut, setCreateClockOut] = useState("17:00");
+  const [createBreak, setCreateBreak] = useState("0");
+  const [createLunch, setCreateLunch] = useState("30");
+  const [createNote, setCreateNote] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [allEmployees, setAllEmployees] = useState<{ id: string; name: string }[]>([]);
+
   const presets = getPresets();
 
   async function fetchTimesheets() {
@@ -215,6 +227,47 @@ export default function TimesheetApprovalPage() {
   useEffect(() => {
     fetchTimesheets();
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    supabase.from("employees").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+      setAllEmployees(data || []);
+    });
+  }, []);
+
+  async function handleCreate() {
+    if (!createEmpId) return;
+    setCreating(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/timesheets/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({
+        employee_id: createEmpId,
+        date: createDate,
+        clock_in: createClockIn,
+        clock_out: createClockOut,
+        break_minutes: createBreak,
+        lunch_minutes: createLunch,
+        note: createNote || undefined,
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      alert(`Error: ${result.error}`);
+      setCreating(false);
+      return;
+    }
+    await fetchTimesheets();
+    setCreating(false);
+    setShowCreate(false);
+    setCreateNote("");
+    // Jump to the newly-created employee
+    setSelectedEmpId(createEmpId);
+    setSelectedDate(createDate);
+  }
 
   useEffect(() => {
     if (selectedEmpId && selectedDate) {
@@ -293,10 +346,91 @@ export default function TimesheetApprovalPage() {
             }`}
           >{p.label}</button>
         ))}
-        <button onClick={handleRebuild} disabled={rebuilding}
-          className="ml-auto px-3 py-1.5 bg-charcoal-mid border border-charcoal-light rounded-lg text-xs text-cream-muted hover:text-cream disabled:opacity-50"
-        >{rebuilding ? "Rebuilding…" : "Rebuild Timesheets"}</button>
+        <div className="ml-auto flex gap-2">
+          <button onClick={() => setShowCreate(true)}
+            className="px-3 py-1.5 bg-teal text-charcoal rounded-lg text-xs font-bold"
+          >+ New Timesheet</button>
+          <button onClick={handleRebuild} disabled={rebuilding}
+            className="px-3 py-1.5 bg-charcoal-mid border border-charcoal-light rounded-lg text-xs text-cream-muted hover:text-cream disabled:opacity-50"
+          >{rebuilding ? "Rebuilding…" : "Rebuild Timesheets"}</button>
+        </div>
       </div>
+
+      {/* Create modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-charcoal-mid rounded-xl border border-charcoal-light p-6 w-full max-w-lg">
+            <h3 className="text-cream font-bold text-lg mb-4">Create Timesheet</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Employee</label>
+                  <select value={createEmpId} onChange={(e) => setCreateEmpId(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  >
+                    <option value="">Select employee…</option>
+                    {allEmployees.map((e) => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Date</label>
+                  <input type="date" value={createDate} onChange={(e) => setCreateDate(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Clock In</label>
+                  <input type="time" value={createClockIn} onChange={(e) => setCreateClockIn(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Clock Out</label>
+                  <input type="time" value={createClockOut} onChange={(e) => setCreateClockOut(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Break (min)</label>
+                  <input type="number" min="0" value={createBreak} onChange={(e) => setCreateBreak(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Lunch (min)</label>
+                  <input type="number" min="0" value={createLunch} onChange={(e) => setCreateLunch(e.target.value)}
+                    className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-cream-muted uppercase tracking-wider mb-1 block">Reason (optional)</label>
+                <input type="text" value={createNote} onChange={(e) => setCreateNote(e.target.value)}
+                  placeholder="e.g. Kiosk was down, forgot to clock in"
+                  className="w-full bg-charcoal border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm placeholder:text-charcoal-light"
+                />
+              </div>
+              <p className="text-[10px] text-amber">
+                Note: If a timesheet already exists for this employee+date, it will be overwritten.
+              </p>
+              <div className="flex gap-2 justify-end pt-2">
+                <button onClick={() => setShowCreate(false)}
+                  className="px-4 py-1.5 bg-charcoal-light text-cream-muted rounded-lg text-xs font-bold"
+                >Cancel</button>
+                <button onClick={handleCreate} disabled={creating || !createEmpId}
+                  className="px-4 py-1.5 bg-teal text-charcoal rounded-lg text-xs font-bold disabled:opacity-50"
+                >{creating ? "Creating…" : "Create Timesheet"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4" style={{ minHeight: "calc(100vh - 220px)" }}>
         {/* ─── Left Sidebar: Employee List ─── */}

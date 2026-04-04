@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   // Get target employee's pay rate
   const { data: targetEmp, error: empErr } = await supabaseAdmin
     .from("employees")
-    .select("id, is_active, pay_rate")
+    .select("id, is_active, pay_rate, pay_type")
     .eq("id", employee_id)
     .single();
 
@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const payRate = targetEmp.pay_rate ? parseFloat(targetEmp.pay_rate) : null;
+  const rawRate = targetEmp.pay_rate ? parseFloat(targetEmp.pay_rate) : null;
+  const payRate = rawRate !== null && targetEmp.pay_type === "salary"
+    ? Math.round((rawRate / 2080) * 100) / 100
+    : rawRate;
   const payAmount = payRate && workedMinutes > 0
     ? Math.round(payRate * (workedMinutes / 60) * 100) / 100
     : null;

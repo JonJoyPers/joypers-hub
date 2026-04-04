@@ -98,6 +98,7 @@ DECLARE
   v_punch RECORD;
   v_pay_rate NUMERIC;
   v_pay_type TEXT;
+  v_hourly_rate NUMERIC;
 BEGIN
   -- Loop through each (employee_id, date) that has punches in the range
   FOR v_rec IN
@@ -175,9 +176,15 @@ BEGIN
       v_has_open := true;
     END IF;
 
-    -- Get pay rate
+    -- Get pay rate and convert salary to hourly (annual / 2080)
     SELECT pay_rate, pay_type::text INTO v_pay_rate, v_pay_type
     FROM employees WHERE id = v_rec.employee_id;
+
+    v_hourly_rate := CASE
+      WHEN v_pay_type = 'salary' AND v_pay_rate IS NOT NULL
+        THEN ROUND(v_pay_rate / 2080.0, 2)
+      ELSE v_pay_rate
+    END;
 
     -- Upsert
     INSERT INTO timesheets (
@@ -194,9 +201,9 @@ BEGIN
       (v_break_ms / 60000)::integer,
       (v_lunch_ms / 60000)::integer,
       v_has_open,
-      v_pay_rate,
-      CASE WHEN v_pay_rate IS NOT NULL
-        THEN ROUND(v_pay_rate * (v_worked_ms / 3600000.0), 2)
+      v_hourly_rate,
+      CASE WHEN v_hourly_rate IS NOT NULL
+        THEN ROUND(v_hourly_rate * (v_worked_ms / 3600000.0), 2)
         ELSE NULL
       END,
       now()

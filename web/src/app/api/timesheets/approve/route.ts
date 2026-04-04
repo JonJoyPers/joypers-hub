@@ -60,14 +60,17 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Snapshot pay rate at approval time
+      // Snapshot pay rate at approval time (convert salary to hourly)
       const { data: empData } = await supabaseAdmin
         .from("employees")
         .select("pay_rate, pay_type")
         .eq("id", ts.employee_id)
         .single();
 
-      const payRate = empData?.pay_rate ? parseFloat(empData.pay_rate) : null;
+      const rawRate = empData?.pay_rate ? parseFloat(empData.pay_rate) : null;
+      const payRate = rawRate !== null && empData?.pay_type === "salary"
+        ? Math.round((rawRate / 2080) * 100) / 100
+        : rawRate;
       const payAmount = payRate && ts.worked_minutes
         ? Math.round(payRate * (ts.worked_minutes / 60) * 100) / 100
         : null;

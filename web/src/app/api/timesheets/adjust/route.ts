@@ -85,11 +85,14 @@ export async function POST(req: NextRequest) {
   // Recalculate pay if rate exists
   const { data: empData } = await supabaseAdmin
     .from("employees")
-    .select("pay_rate")
+    .select("pay_rate, pay_type")
     .eq("id", ts.employee_id)
     .single();
 
-  const payRate = empData?.pay_rate ? parseFloat(empData.pay_rate) : null;
+  const rawRate = empData?.pay_rate ? parseFloat(empData.pay_rate) : null;
+  const payRate = rawRate !== null && empData?.pay_type === "salary"
+    ? Math.round((rawRate / 2080) * 100) / 100
+    : rawRate;
   if (payRate && update.worked_minutes) {
     update.pay_rate_snapshot = payRate;
     update.pay_amount = Math.round(payRate * ((update.worked_minutes as number) / 60) * 100) / 100;

@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark" | "system";
 
+function applyTheme(t: Theme) {
+  if (t === "system") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", t);
+  }
+}
+
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("system");
 
@@ -15,14 +23,6 @@ export default function ThemeToggle() {
       applyTheme(saved);
     }
   }, []);
-
-  function applyTheme(t: Theme) {
-    if (t === "system") {
-      document.documentElement.removeAttribute("data-theme");
-    } else {
-      document.documentElement.setAttribute("data-theme", t);
-    }
-  }
 
   function cycleTheme() {
     const next: Theme = theme === "dark" ? "light" : theme === "light" ? "system" : "dark";

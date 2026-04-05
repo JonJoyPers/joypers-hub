@@ -24,42 +24,42 @@
 /* ── Light theme ── */
 [data-theme="light"] {
   color-scheme: light;
-  --background: #FAFAFA;
-  --foreground: #1A1A1A;
-  --charcoal: #FAFAFA;
+  --background: #F3F4F6;
+  --foreground: #111827;
+  --charcoal: #F3F4F6;
   --charcoal-mid: #FFFFFF;
-  --charcoal-light: #E5E5E5;
-  --cream: #1A1A1A;
-  --cream-muted: #6B6B6B;
-  --teal: #008080;
-  --teal-light: #4DB6AC;
-  --teal-dark: #00A0A0;
-  --amber: #D97706;
-  --rose: #DB2777;
-  --violet: #7C3AED;
-  --red: #DC2626;
-  --green: #16A34A;
+  --charcoal-light: #D1D5DB;
+  --cream: #111827;
+  --cream-muted: #4B5563;
+  --teal: #0F766E;
+  --teal-light: #14B8A6;
+  --teal-dark: #115E59;
+  --amber: #B45309;
+  --rose: #BE185D;
+  --violet: #6D28D9;
+  --red: #B91C1C;
+  --green: #15803D;
 }
 
 /* ── System preference (when user hasn't set one) ── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     color-scheme: light;
-    --background: #FAFAFA;
-    --foreground: #1A1A1A;
-    --charcoal: #FAFAFA;
+    --background: #F3F4F6;
+    --foreground: #111827;
+    --charcoal: #F3F4F6;
     --charcoal-mid: #FFFFFF;
-    --charcoal-light: #E5E5E5;
-    --cream: #1A1A1A;
-    --cream-muted: #6B6B6B;
-    --teal: #008080;
-    --teal-light: #4DB6AC;
-    --teal-dark: #00A0A0;
-    --amber: #D97706;
-    --rose: #DB2777;
-    --violet: #7C3AED;
-    --red: #DC2626;
-    --green: #16A34A;
+    --charcoal-light: #D1D5DB;
+    --cream: #111827;
+    --cream-muted: #4B5563;
+    --teal: #0F766E;
+    --teal-light: #14B8A6;
+    --teal-dark: #115E59;
+    --amber: #B45309;
+    --rose: #BE185D;
+    --violet: #6D28D9;
+    --red: #B91C1C;
+    --green: #15803D;
   }
 }
 

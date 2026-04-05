@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
@@ -65,7 +66,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-charcoal-light">
+      <div className="p-4 border-t border-charcoal-light space-y-1">
+        <ThemeToggle />
         <button
           onClick={handleLogout}
           aria-label="Sign out of dashboard"

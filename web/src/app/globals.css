@@ -88,27 +88,33 @@ body {
   color: var(--foreground);
 }
 
-/* Make date/time picker icons visible on both themes */
+/* Date/time picker icons — white by default (dark theme), dark for light theme */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  opacity: 0.8;
+  filter: invert(1) brightness(1.2);
+  opacity: 0.9;
 }
 
-[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
-[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
-[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-:root:not([data-theme]) input[type="date"]::-webkit-calendar-picker-indicator,
-:root:not([data-theme]) input[type="time"]::-webkit-calendar-picker-indicator,
-:root:not([data-theme]) input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="month"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="week"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.7;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) input[type="date"]::-webkit-calendar-picker-indicator,
   :root:not([data-theme]) input[type="time"]::-webkit-calendar-picker-indicator,
-  :root:not([data-theme]) input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  :root:not([data-theme]) input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme]) input[type="month"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme]) input[type="week"]::-webkit-calendar-picker-indicator {
     filter: none;
+    opacity: 0.7;
   }
 }

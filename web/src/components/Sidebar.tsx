@@ -55,7 +55,7 @@ export default function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 active
-                  ? "bg-teal-dark text-cream"
+                  ? "bg-teal-dark text-white"
                   : "text-cream-muted hover:bg-charcoal-light hover:text-cream"
               }`}
             >

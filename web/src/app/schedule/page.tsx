@@ -227,7 +227,7 @@ function Modal({
 /* ─── Select/Input component helpers ─── */
 
 const inputClass = "bg-charcoal-light border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm w-full";
-const btnPrimary = "px-4 py-2 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark";
+const btnPrimary = "px-4 py-2 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark";
 const btnDanger = "px-4 py-2 bg-red/80 text-cream rounded-lg text-sm hover:bg-red";
 const btnSecondary = "px-4 py-2 bg-charcoal-light text-cream-muted rounded-lg text-sm hover:text-cream";
 
@@ -552,7 +552,7 @@ export default function SchedulePage() {
             className={`px-4 py-2 rounded-lg text-sm ${
               allPublished
                 ? "bg-green-700/30 text-green-400 border border-green-700/50"
-                : "bg-teal text-cream hover:bg-teal-dark"
+                : "bg-teal text-white hover:bg-teal-dark"
             }`}
           >
             {allPublished ? "\u2713 Published" : "Publish"}

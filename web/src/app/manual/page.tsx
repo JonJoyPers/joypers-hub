@@ -94,7 +94,7 @@ export default function ManualPage() {
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-cream">Store Manual</h2>
-        <button onClick={addSection} className="px-4 py-1.5 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">
+        <button onClick={addSection} className="px-4 py-1.5 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark">
           + Add Section
         </button>
       </div>
@@ -108,7 +108,7 @@ export default function ManualPage() {
               onClick={() => { setSelected(section.id); setEditing(false); }}
               className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-colors ${
                 selected === section.id
-                  ? "bg-teal-dark text-cream"
+                  ? "bg-teal-dark text-white"
                   : "text-cream-muted hover:bg-charcoal-light hover:text-cream"
               }`}
             >
@@ -135,7 +135,7 @@ export default function ManualPage() {
                     className="w-full bg-charcoal-light border border-charcoal-light rounded-lg px-4 py-3 text-cream text-sm min-h-[300px] font-mono"
                   />
                   <div className="flex gap-2 mt-4">
-                    <button onClick={saveSection} className="px-4 py-2 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">
+                    <button onClick={saveSection} className="px-4 py-2 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark">
                       Save (bumps to v{currentSection.version + 1})
                     </button>
                     <button onClick={() => setEditing(false)} className="px-4 py-2 bg-charcoal-light text-cream-muted rounded-lg text-sm">

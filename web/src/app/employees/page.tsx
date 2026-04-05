@@ -529,7 +529,7 @@ export default function EmployeesPage() {
             </div>
             <button
               onClick={() => { setShowAddModal(true); setAddError(""); setAddForm(emptyForm); }}
-              className="px-4 py-2 bg-teal hover:bg-teal-dark text-cream rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-lg text-sm font-medium transition-colors"
             >
               + Add Employee
             </button>
@@ -805,7 +805,7 @@ export default function EmployeesPage() {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-cream-muted text-sm hover:text-cream transition-colors">Cancel</button>
-                <button type="submit" disabled={addLoading} className="px-4 py-2 bg-teal hover:bg-teal-dark text-cream rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                <button type="submit" disabled={addLoading} className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
                   {addLoading ? "Creating..." : "Create Employee"}
                 </button>
               </div>
@@ -849,7 +849,7 @@ function DetailsTab({
           </button>
         ) : (
           <>
-            <button onClick={saveEdit} className="px-4 py-2 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">Save</button>
+            <button onClick={saveEdit} className="px-4 py-2 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark">Save</button>
             <button onClick={() => setEditing(false)} className="px-4 py-2 bg-charcoal-light text-cream-muted rounded-lg text-sm hover:text-cream">Cancel</button>
           </>
         )}
@@ -997,7 +997,7 @@ function AvailabilityTab({
           </button>
         ) : (
           <div className="flex gap-2">
-            <button onClick={saveAvailability} className="px-3 py-1.5 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">Save</button>
+            <button onClick={saveAvailability} className="px-3 py-1.5 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark">Save</button>
             <button onClick={() => setEditingAvail(false)} className="px-3 py-1.5 bg-charcoal-light text-cream-muted rounded-lg text-sm hover:text-cream">Cancel</button>
           </div>
         )}
@@ -1106,7 +1106,7 @@ function PayTab({
           </button>
         ) : (
           <div className="flex gap-2">
-            <button onClick={saveEdit} className="px-3 py-1.5 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark">Save</button>
+            <button onClick={saveEdit} className="px-3 py-1.5 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark">Save</button>
             <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-charcoal-light text-cream-muted rounded-lg text-sm hover:text-cream">Cancel</button>
           </div>
         )}

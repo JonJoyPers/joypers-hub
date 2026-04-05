@@ -70,7 +70,7 @@ export default function LeavePage() {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-sm capitalize ${
                 filter === f
-                  ? "bg-teal text-cream"
+                  ? "bg-teal text-white"
                   : "bg-charcoal-mid border border-charcoal-light text-cream-muted hover:text-cream"
               }`}
             >

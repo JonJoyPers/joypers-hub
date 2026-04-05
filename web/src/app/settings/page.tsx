@@ -117,7 +117,7 @@ const PERMISSION_GROUPS = [
 const inputClass =
   "bg-charcoal-light border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm w-full focus:border-teal focus:outline-none";
 const btnPrimary =
-  "px-4 py-2 bg-teal text-cream rounded-lg text-sm hover:bg-teal-dark transition-colors";
+  "px-4 py-2 bg-teal text-white rounded-lg text-sm hover:bg-teal-dark transition-colors";
 const btnDanger =
   "px-4 py-2 bg-red/80 text-cream rounded-lg text-sm hover:bg-red transition-colors";
 const btnSecondary =

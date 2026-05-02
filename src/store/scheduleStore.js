@@ -68,7 +68,7 @@ export const useScheduleStore = create((set, get) => ({
   addShift: async ({ userId, date, startTime, endTime, type }) => {
     if (!isSupabaseConfigured()) {
       const shift = {
-        id: `sh_${Date.now()}`,
+        id: `sh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         userId,
         date,
         startTime,

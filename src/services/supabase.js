@@ -35,19 +35,35 @@ try {
   console.warn("Supabase client creation failed:", e);
   _clientReady = false;
   // Create a stub that returns errors for any query chain.
-  // Uses a self-returning proxy pattern so any method chain works.
+  //
+  // Real Supabase queries chain arbitrarily deep:
+  //   from('x').select('y').eq('a', 1).order('created_at').limit(10)
+  //
+  // The stub must survive any depth of property access AND any number
+  // of intermediate calls, then resolve with {data:null, error} when
+  // awaited. We do this by making the proxy thenable: the chain stays
+  // chainable until something `await`s it, at which point `then` is
+  // accessed and we resolve with errResult.
   const errResult = { data: null, error: new Error("Supabase not configured") };
-  const chainable = () =>
-    new Proxy(() => errResult, {
-      get: () => chainable(),
-      apply: () => errResult,
+  const makeChainable = () => {
+    const target = function () {};
+    return new Proxy(target, {
+      // Any property access keeps the chain alive — except `then`, which
+      // makes the proxy awaitable so `await supabase.from(x).select(y)`
+      // resolves to errResult instead of a never-ending proxy.
+      get: (_t, prop) => {
+        if (prop === "then") {
+          return (resolve) => resolve(errResult);
+        }
+        return makeChainable();
+      },
+      // Calling the proxy as a function (e.g. `.select('*')`) returns
+      // another chainable, so `.eq(...)`, `.order(...)`, etc. keep working.
+      apply: () => makeChainable(),
     });
-  const queryProxy = new Proxy(
-    {},
-    { get: () => chainable() }
-  );
+  };
   _supabase = {
-    from: () => queryProxy,
+    from: () => makeChainable(),
     auth: {
       getSession: () => ({ data: { session: null } }),
       signInWithPassword: () => ({ data: null, error: new Error("Not configured") }),

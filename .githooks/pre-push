@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Pre-push hook — runs the Jest suite before allowing a push.
+#
+# Stops you from accidentally shipping broken tests to origin. The full
+# suite runs in ~1.1s, so the cost is negligible.
+#
+# Bypass for emergencies (use sparingly):
+#   git push --no-verify
+#
+# Note: Maestro E2E flows are NOT run here — they need a booted simulator
+# and real credentials. Run those manually with `npm run e2e` before
+# shipping anything risky.
+
+set -e
+
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+DIM=$'\033[2m'
+RESET=$'\033[0m'
+
+printf "%spre-push: running Jest suite (Ctrl-C to abort)%s\n" "$DIM" "$RESET"
+
+# --silent suppresses npm's own log noise; --bail stops at first failure
+if ! npm test --silent -- --bail >/dev/null 2>&1; then
+  printf "%s✗ Tests failed. Push aborted.%s\n" "$RED" "$RESET"
+  printf "%s  Run \`npm test\` to see the failure, or \`git push --no-verify\` to bypass.%s\n" "$DIM" "$RESET"
+  exit 1
+fi
+
+printf "%s✓ Tests passed. Pushing.%s\n" "$GREEN" "$RESET"
+exit 0

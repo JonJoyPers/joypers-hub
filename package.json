@@ -12,7 +12,8 @@
     "e2e:login": "maestro test .maestro/flows/login.yaml",
     "e2e:punch": "maestro test .maestro/flows/punch_in_out.yaml",
     "e2e:schedule": "maestro test .maestro/flows/view_schedule.yaml",
-    "e2e:studio": "maestro studio"
+    "e2e:studio": "maestro studio",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

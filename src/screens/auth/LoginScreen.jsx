@@ -74,7 +74,12 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry
             returnKeyType="done"
-            onSubmitEditing={handleLogin}
+            // Intentionally NO onSubmitEditing here — pressing Done on the
+            // keyboard used to call handleLogin, which read stale closure
+            // state if state updates from rapid typing (real users or
+            // E2E tools like Maestro) hadn't flushed yet, producing a
+            // false "Missing fields" alert. Users submit via the SIGN IN
+            // button, which is the deterministic path.
           />
 
           <TouchableOpacity

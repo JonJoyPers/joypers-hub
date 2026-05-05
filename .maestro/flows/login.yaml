@@ -9,6 +9,14 @@
 # Targets testIDs on the inputs (login-name-input, login-password-input,
 # login-submit-button) — not visible label text — so the flow won't break
 # if copy changes.
+#
+# NOTE: We intentionally do NOT call `hideKeyboard` between fields. On iOS
+# Maestro implements hideKeyboard by pressing the Return/Done key, which
+# triggers any onSubmitEditing handler on the focused TextInput. That can
+# fire validation against stale React state before queued onChangeText
+# updates have been flushed — producing a "Missing fields" alert that
+# blocks the SIGN IN button. Tapping the next input by ID auto-dismisses
+# the keyboard anyway, so hideKeyboard is unnecessary.
 
 appId: com.joypersshoes.hub
 tags:
@@ -23,17 +31,16 @@ tags:
 - assertVisible: "FULL NAME"
 - assertVisible: "PASSWORD"
 
-# Fill in credentials — target the inputs by testID, not the label text
+# Fill in credentials — target the inputs by testID, not the label text.
+# No hideKeyboard between fields (see header comment).
 - tapOn:
     id: "login-name-input"
 - inputText: "${MAESTRO_TEST_NAME}"
-- hideKeyboard
 - tapOn:
     id: "login-password-input"
 - inputText: "${MAESTRO_TEST_PASSWORD}"
-- hideKeyboard
 
-# Sign in
+# Submit
 - tapOn:
     id: "login-submit-button"
 

@@ -1,0 +1,27 @@
+# Reusable login sub-flow
+#
+# Invoked via `runFlow: file: ../subflows/login.yaml` from any flow that
+# needs an authenticated session. Keeps the credentials handling in one
+# place — change it once when the login UI evolves.
+#
+# Assumes the calling flow already ran `launchApp:` (so we don't re-launch
+# and trash any setup the caller did, like `permissions:`).
+
+appId: com.joypersshoes.hub
+---
+- assertVisible: "JOY-PER'S"
+
+- tapOn:
+    text: "FULL NAME"
+- inputText: "${MAESTRO_TEST_NAME}"
+- hideKeyboard
+
+- tapOn:
+    text: "PASSWORD"
+- inputText: "${MAESTRO_TEST_PASSWORD}"
+- hideKeyboard
+
+- tapOn: "SIGN IN"
+
+# Wait for the tab navigator to mount before the caller continues.
+- assertVisible: "Bulletin Board"

@@ -1,0 +1,57 @@
+# Punch in / Punch out
+#
+# Highest-stakes user journey in the app: payroll depends on this not
+# breaking silently. Drives the full path from cold launch through a
+# complete clock-in / clock-out cycle.
+#
+# Requires MAESTRO_TEST_NAME and MAESTRO_TEST_PASSWORD env vars.
+
+appId: com.joypersshoes.hub
+tags:
+  - smoke
+  - timeclock
+---
+- launchApp:
+    clearState: true
+    permissions:
+      location: allow      # TimeclockScreen geofences the punch
+
+# ── Login ────────────────────────────────────────────────
+- runFlow:
+    file: ../subflows/login.yaml
+
+# ── Navigate: Bulletin → Work tab → Time Clock sub-tab ──
+- tapOn: "Work"
+- assertVisible: "WORK"
+- tapOn: "Time Clock"
+
+# Time Clock screen renders
+- assertVisible: "TIME CLOCK"
+
+# Capture the current state — user might already be clocked in from a
+# prior aborted run, in which case we punch out first to reset.
+- runFlow:
+    when:
+      visible: "CLOCK OUT"
+    commands:
+      - tapOn: "CLOCK OUT"
+      # Confirm any prompt that appears
+      - runFlow:
+          when:
+            visible: "Confirm"
+          commands:
+            - tapOn: "Confirm"
+      - assertVisible: "CLOCK IN"
+
+# ── Clock IN ─────────────────────────────────────────────
+- tapOn: "CLOCK IN"
+- assertVisible: "CLOCKED IN"
+- assertVisible: "CLOCK OUT"   # button flipped
+
+# Recent punches list shows the new entry
+- assertVisible: "RECENT PUNCHES"
+
+# ── Clock OUT ────────────────────────────────────────────
+- tapOn: "CLOCK OUT"
+- assertVisible: "CLOCK IN"    # button flipped back
+- assertVisible: "CLOCKED OUT"

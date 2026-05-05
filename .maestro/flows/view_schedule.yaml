@@ -1,0 +1,25 @@
+# View schedule
+#
+# Verifies the user can navigate from cold launch to the schedule view
+# and that the schedule screen actually renders (catches blank-screen
+# regressions, store init failures, navigation wiring bugs).
+
+appId: com.joypersshoes.hub
+tags:
+  - smoke
+  - schedule
+---
+- launchApp:
+    clearState: true
+
+# ── Login ────────────────────────────────────────────────
+- runFlow:
+    file: ../subflows/login.yaml
+
+# ── Navigate: Work tab → Schedule sub-tab ───────────────
+- tapOn: "Work"
+- assertVisible: "WORK"
+- tapOn: "Schedule"
+
+# Schedule screen renders
+- assertVisible: "SCHEDULE"

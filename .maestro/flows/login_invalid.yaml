@@ -1,0 +1,37 @@
+# Login error path
+#
+# Verifies that bad credentials surface a "Login failed" alert and that
+# the user stays on the LoginScreen (does not navigate away).
+
+appId: com.joypersshoes.hub
+tags:
+  - smoke
+  - auth
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "JOY-PER'S"
+
+# Bad credentials
+- tapOn:
+    text: "FULL NAME"
+- inputText: "Definitely Not A Real Employee"
+- hideKeyboard
+- tapOn:
+    text: "PASSWORD"
+- inputText: "wrong-password"
+- hideKeyboard
+
+- tapOn: "SIGN IN"
+
+# Native iOS Alert appears with title + message
+- assertVisible: "Login failed"
+
+# Dismiss the alert
+- tapOn: "OK"
+
+# Still on LoginScreen — did NOT navigate to the tab navigator
+- assertVisible: "JOY-PER'S"
+- assertVisible: "SIGN IN"
+- assertNotVisible: "Bulletin Board"

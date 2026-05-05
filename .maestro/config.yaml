@@ -1,0 +1,15 @@
+# Maestro project config — shared settings applied to every flow.
+# https://maestro.mobile.dev/cli/configuration
+
+# App identifier resolved by `launchApp:` in each flow.
+# Matches expo.ios.bundleIdentifier in app.json.
+appId: com.joypersshoes.hub
+
+# Default flow timeout (ms). Flows that exceed this fail loudly.
+flowTimeout: 120000
+
+# Tag groups so we can run subsets:
+#   maestro test --include-tags=smoke .maestro/flows/
+#   maestro test --include-tags=auth .maestro/flows/
+includeTags:
+  - smoke

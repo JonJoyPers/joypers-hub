@@ -1,0 +1,37 @@
+# Login happy path
+#
+# Verifies that a valid name + password drops the user into the main
+# tab navigator (Bulletin is the initialRouteName per MainTabNavigator).
+#
+# Requires MAESTRO_TEST_NAME and MAESTRO_TEST_PASSWORD env vars — set
+# locally with `export ...` or pass via `maestro test -e KEY=VAL`.
+
+appId: com.joypersshoes.hub
+tags:
+  - smoke
+  - auth
+---
+- launchApp:
+    clearState: true        # reset auth + zustand persistence between runs
+
+# Login screen renders
+- assertVisible: "JOY-PER'S"
+- assertVisible: "FULL NAME"
+- assertVisible: "PASSWORD"
+
+# Fill in credentials
+- tapOn:
+    text: "FULL NAME"
+- inputText: "${MAESTRO_TEST_NAME}"
+- hideKeyboard
+- tapOn:
+    text: "PASSWORD"
+- inputText: "${MAESTRO_TEST_PASSWORD}"
+- hideKeyboard
+
+# Sign in
+- tapOn: "SIGN IN"
+
+# Post-login: we land on the Bulletin tab (initialRouteName)
+- assertVisible: "Bulletin Board"
+- assertVisible: "STORE UPDATES"

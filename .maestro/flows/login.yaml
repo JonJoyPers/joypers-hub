@@ -5,6 +5,10 @@
 #
 # Requires MAESTRO_TEST_NAME and MAESTRO_TEST_PASSWORD env vars — set
 # locally with `export ...` or pass via `maestro test -e KEY=VAL`.
+#
+# Targets testIDs on the inputs (login-name-input, login-password-input,
+# login-submit-button) — not visible label text — so the flow won't break
+# if copy changes.
 
 appId: com.joypersshoes.hub
 tags:
@@ -19,18 +23,19 @@ tags:
 - assertVisible: "FULL NAME"
 - assertVisible: "PASSWORD"
 
-# Fill in credentials
+# Fill in credentials — target the inputs by testID, not the label text
 - tapOn:
-    text: "FULL NAME"
+    id: "login-name-input"
 - inputText: "${MAESTRO_TEST_NAME}"
 - hideKeyboard
 - tapOn:
-    text: "PASSWORD"
+    id: "login-password-input"
 - inputText: "${MAESTRO_TEST_PASSWORD}"
 - hideKeyboard
 
 # Sign in
-- tapOn: "SIGN IN"
+- tapOn:
+    id: "login-submit-button"
 
 # Post-login: we land on the Bulletin tab (initialRouteName)
 - assertVisible: "Bulletin Board"

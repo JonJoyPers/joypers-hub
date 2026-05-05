@@ -58,7 +58,8 @@
           "project": "joypers-hub-mobile",
           "uploadSourceMaps": false
         }
-      ]
+      ],
+      "./plugins/with-swiftui-core-fix"
     ],
     "extra": {
       "eas": {

@@ -1,9 +1,9 @@
 /**
  * Two parallel Jest projects:
  *
- * 1. "unit"      — fast Node-environment tests for stores, services, and
- *                  pure logic. No RN runtime, no jsdom. This is what runs
- *                  in CI and what the existing 90 tests rely on.
+ * 1. "unit"      — fast Node-environment tests for stores, services,
+ *                  pure logic, AND build-time tooling (Expo config plugins,
+ *                  scripts). No RN runtime, no jsdom.
  *
  * 2. "component" — RN component tests via @testing-library/react-native,
  *                  using the jest-expo/ios platform preset (Haste config +
@@ -26,7 +26,10 @@ module.exports = {
   projects: [
     {
       displayName: 'unit',
-      testMatch: ['<rootDir>/src/**/*.test.{js,jsx}'],
+      testMatch: [
+        '<rootDir>/src/**/*.test.{js,jsx}',
+        '<rootDir>/plugins/**/*.test.{js,jsx}',
+      ],
       testPathIgnorePatterns: ['/node_modules/', '\\.rntl\\.test\\.'],
       transform: {
         '^.+\\.jsx?$': 'babel-jest',

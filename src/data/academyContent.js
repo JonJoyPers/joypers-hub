@@ -165,25 +165,25 @@ export const VIDEO_RESOURCES = [
   {
     category: "Shoe Technology",
     videos: [
-      { id: "v01", title: "Hoka Technology Overview", source: "Hoka", duration: "3:45", url: "https://www.youtube.com/watch?v=qGGSzn_kEJU" },
-      { id: "v02", title: "Brooks DNA LOFT Explained", source: "Brooks Running", duration: "2:30", url: "https://www.youtube.com/watch?v=i-OhM9s3o_8" },
-      { id: "v03", title: "ASICS GEL Technology", source: "ASICS", duration: "4:12", url: "https://www.youtube.com/watch?v=4F9mETGCMmE" },
-      { id: "v04", title: "New Balance Fresh Foam X", source: "New Balance", duration: "2:58", url: "https://www.youtube.com/watch?v=WNms8aF6yKA" },
+      { id: "v01", title: "Hoka Technology Overview", source: "HOKA TV", duration: "", url: "https://www.youtube.com/watch?v=e4Isj2ZqQb4" },
+      { id: "v02", title: "Brooks DNA LOFT v3 Explained", source: "Brooks Running", duration: "", url: "https://www.youtube.com/watch?v=2A8IUWovPLM" },
+      { id: "v03", title: "ASICS GEL Technology", source: "ASICS", duration: "", url: "https://www.youtube.com/watch?v=1cJvW7Tjb38" },
+      { id: "v04", title: "New Balance Fresh Foam X", source: "New Balance", duration: "", url: "https://www.youtube.com/watch?v=lEK6z2uQzkg" },
     ],
   },
   {
     category: "Foot Health & Fitting",
     videos: [
-      { id: "v05", title: "Understanding Pronation", source: "Runner's World", duration: "5:20", url: "https://www.youtube.com/watch?v=Y_1rQWkIb6o" },
-      { id: "v06", title: "How to Use a Brannock Device", source: "Aetrex", duration: "3:15", url: "https://www.youtube.com/watch?v=ePJ1MVs1Z_M" },
-      { id: "v07", title: "Choosing the Right Running Shoe", source: "REI", duration: "6:30", url: "https://www.youtube.com/watch?v=dEkUq-Rs-Tc" },
+      { id: "v05", title: "Understanding Pronation", source: "All Sorts Of Running", duration: "", url: "https://www.youtube.com/watch?v=nCqL-wqAxDw" },
+      { id: "v06", title: "How to Use a Brannock Device", source: "Foot Geekz", duration: "", url: "https://www.youtube.com/watch?v=khsBN-3tF0c" },
+      { id: "v07", title: "Choosing the Right Running Shoe", source: "REI", duration: "", url: "https://www.youtube.com/watch?v=bJOTN_D6tMk" },
     ],
   },
   {
     category: "Gait & Biomechanics",
     videos: [
-      { id: "v08", title: "Gait Analysis Basics", source: "PhysioTutors", duration: "7:45", url: "https://www.youtube.com/watch?v=brFM6ByxGBA" },
-      { id: "v09", title: "Overpronation vs Supination", source: "The Run Experience", duration: "4:50", url: "https://www.youtube.com/watch?v=MbVPH8F8mMI" },
+      { id: "v08", title: "Gait Analysis Basics", source: "Athletes Training Room", duration: "", url: "https://www.youtube.com/watch?v=fwSu98yvgCY" },
+      { id: "v09", title: "Pronation vs Supination Explained", source: "Next Level PT", duration: "", url: "https://www.youtube.com/watch?v=4P0509Yhq7Y" },
     ],
   },
 ];

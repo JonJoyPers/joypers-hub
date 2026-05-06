@@ -8,14 +8,16 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Linking,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   BookOpen, CheckCircle, XCircle, RotateCcw, Trophy,
-  ChevronDown, ChevronUp, Play, ExternalLink, Share2,
-  FileQuestion, Video, Brain,
+  ChevronDown, ChevronUp, Play, Share2,
+  FileQuestion, Video, Brain, X,
 } from "lucide-react-native";
+import YoutubePlayer from "react-native-youtube-iframe";
 import { COLORS } from "../../theme/colors";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
@@ -350,6 +352,7 @@ export default function AcademyScreen() {
   // ── Learn tab state ──
   const [modules, setModules] = useState([]);
   const [learnLoading, setLearnLoading] = useState(true);
+  const [playerVideo, setPlayerVideo] = useState(null);
 
   // ── Quiz tab state ──
   const [quizzes, setQuizzes] = useState([]);
@@ -733,14 +736,7 @@ export default function AcademyScreen() {
                     <TouchableOpacity
                       key={video.id}
                       style={styles.videoCard}
-                      onPress={() => {
-                        const vidId = extractYouTubeId(video.url);
-                        if (vidId) {
-                          Linking.openURL(`https://youtu.be/${vidId}`);
-                        } else if (video.url) {
-                          Linking.openURL(video.url);
-                        }
-                      }}
+                      onPress={() => setPlayerVideo(video)}
                       activeOpacity={0.8}
                     >
                       <View style={styles.videoThumb}>
@@ -752,7 +748,7 @@ export default function AcademyScreen() {
                           {[video.source, video.duration].filter(Boolean).join("  ·  ")}
                         </Text>
                       </View>
-                      <ExternalLink size={16} color={COLORS.creamMuted} strokeWidth={2} />
+                      <View style={styles.videoPlayCue}><Play size={12} color={COLORS.teal} strokeWidth={2.5} fill={COLORS.teal} /></View>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -970,6 +966,53 @@ export default function AcademyScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       )}
+      {/* ═══════════════════ IN-APP YOUTUBE PLAYER ═══════════════════ */}
+      <Modal
+        visible={!!playerVideo}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPlayerVideo(null)}
+        statusBarTranslucent
+      >
+        <View style={styles.playerBackdrop}>
+          <View style={styles.playerCard}>
+            <View style={styles.playerHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.playerTitle} numberOfLines={2}>
+                  {playerVideo?.title}
+                </Text>
+                {playerVideo?.source ? (
+                  <Text style={styles.playerSource}>{playerVideo.source}</Text>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={() => setPlayerVideo(null)}
+                style={styles.playerClose}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={20} color={COLORS.cream} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.playerVideoWrap}>
+              {playerVideo ? (
+                <YoutubePlayer
+                  height={Math.round((Dimensions.get("window").width - 32) * 9 / 16)}
+                  width={Dimensions.get("window").width - 32}
+                  play
+                  videoId={extractYouTubeId(playerVideo.url) || ""}
+                  onError={(e) =>
+                    Alert.alert(
+                      "Playback error",
+                      "This video can't be played right now. " + (e || "")
+                    )
+                  }
+                  webViewProps={{ allowsInlineMediaPlayback: true }}
+                />
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1115,4 +1158,45 @@ const styles = StyleSheet.create({
   videoInfo: { flex: 1, gap: 2 },
   videoTitle: { fontSize: 14, fontWeight: "700", color: COLORS.cream },
   videoMeta: { fontSize: 11, color: COLORS.creamMuted, fontWeight: "600" },
+  videoPlayCue: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.teal + "22",
+    alignItems: "center", justifyContent: "center",
+  },
+
+  // In-app YouTube player modal
+  playerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  playerCard: {
+    width: "100%",
+    backgroundColor: COLORS.charcoalMid,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.charcoalLight,
+  },
+  playerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  playerTitle: { fontSize: 14, fontWeight: "700", color: COLORS.cream },
+  playerSource: { fontSize: 11, color: COLORS.creamMuted, fontWeight: "600", marginTop: 2 },
+  playerClose: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.charcoalLight,
+    alignItems: "center", justifyContent: "center",
+  },
+  playerVideoWrap: {
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

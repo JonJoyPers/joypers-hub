@@ -187,3 +187,522 @@ export const VIDEO_RESOURCES = [
     ],
   },
 ];
+
+/**
+ * Per-video comprehension quizzes — one short subject-matter quiz per Learn
+ * tab video so we can check whether sales associates actually absorbed the
+ * training. Shape matches the academy_questions row shape in
+ * SupabaseQuizSession, so the same quiz player renders both.
+ *
+ * Each quiz id is namespaced "video-quiz-<videoId>" so the screen can resolve
+ * a quiz directly from a tapped video, and AcademyScreen treats the prefix
+ * the same way it treats "fallback-" — purely local, never round-trips to
+ * Supabase.
+ */
+function mkQuestion(prefix, idx, text, options, correct, explanation) {
+  return {
+    id: `${prefix}-q${idx + 1}`,
+    question_text: text,
+    option_a: options[0],
+    option_b: options[1],
+    option_c: options[2],
+    option_d: options[3],
+    correct_option: ["A", "B", "C", "D"][correct],
+    explanation,
+    sort_order: idx,
+  };
+}
+
+export const VIDEO_QUIZZES = [
+  {
+    id: "video-quiz-v01",
+    videoId: "v01",
+    title: "Hoka Technology Check",
+    category: "product",
+    description: "Meta-Rocker, PROFLY, and how Hoka actually fits on the floor.",
+    questions: [
+      [
+        "What is Hoka's Meta-Rocker?",
+        [
+          "A curved sole geometry that creates a smooth heel-to-toe roll",
+          "A removable foam insert in the heel",
+          "A wide forefoot platform for stability",
+          "A breathable mesh upper panel",
+        ],
+        0,
+        "Meta-Rocker is Hoka's signature curved midsole geometry — it rolls the foot smoothly through the gait cycle.",
+      ],
+      [
+        "PROFLY foam is best described as:",
+        [
+          "A single-density foam tuned for energy return",
+          "A dual-density setup — firmer on top for stability, softer below for cushion",
+          "A nitrogen-infused racing compound",
+          "A gel insert under the heel",
+        ],
+        1,
+        "PROFLY pairs a firmer top layer with a softer bottom layer to balance support and a cushy landing.",
+      ],
+      [
+        "The Active Foot Frame is Hoka's:",
+        [
+          "Reinforced toe cap",
+          "Deep heel cradle that holds the foot without rigid posts",
+          "Plastic shank under the arch",
+          "Pull-tab heel loop",
+        ],
+        1,
+        "Active Foot Frame is a deep, cupped midsole that cradles the heel for natural support.",
+      ],
+      [
+        "A common mistake when fitting Hoka is:",
+        [
+          "Recommending the Bondi to flat-footed customers",
+          "Forgetting that most Hokas tend to run half a size small",
+          "Pairing them with cushioned insoles",
+          "Lacing them through the top eyelet",
+        ],
+        1,
+        "Hoka usually runs about half a size small — always offer the next half up to try on.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v02",
+    videoId: "v02",
+    title: "Brooks DNA LOFT v3 Check",
+    category: "product",
+    description: "What makes the latest DNA LOFT different, and who it's for.",
+    questions: [
+      [
+        "DNA LOFT v3 is Brooks's:",
+        [
+          "Outsole rubber compound",
+          "Nitrogen-infused supercritical midsole foam",
+          "Heel counter material",
+          "Lacing system",
+        ],
+        1,
+        "v3 is a nitrogen-infused supercritical foam — Brooks's lightest, softest, most responsive midsole to date.",
+      ],
+      [
+        "Compared to earlier DNA LOFT, v3 is:",
+        [
+          "Heavier and firmer",
+          "Lighter, softer, and more responsive",
+          "The same foam in a new color",
+          "A leather-based material",
+        ],
+        1,
+        "Nitrogen infusion drops weight and adds bounce versus the older DNA LOFT formulations.",
+      ],
+      [
+        "DNA LOFT v3 debuted in which Brooks line?",
+        [
+          "Adrenaline GTS",
+          "Ghost Max",
+          "Glycerin / Glycerin Max",
+          "Beast 20",
+        ],
+        2,
+        "It launched in the Glycerin — Brooks's premium neutral daily trainer.",
+      ],
+      [
+        "The best customer match for a DNA LOFT v3 shoe is:",
+        [
+          "Someone wanting maximum stability or motion control",
+          "Someone seeking soft, plush daily cushion",
+          "Someone needing carbon-plate race-day shoes",
+          "Someone with severe overpronation",
+        ],
+        1,
+        "DNA LOFT v3 shoes are plush neutral trainers — not stability shoes and not racers.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v03",
+    videoId: "v03",
+    title: "ASICS GEL Check",
+    category: "product",
+    description: "What GEL is, where it lives in the shoe, and who benefits.",
+    questions: [
+      [
+        "GEL technology in ASICS shoes is primarily:",
+        [
+          "A rubber outsole compound",
+          "A silicone-based cushion insert that absorbs impact",
+          "A breathable upper material",
+          "A type of lacing system",
+        ],
+        1,
+        "GEL is a viscous, silicone-based insert engineered to attenuate shock at impact.",
+      ],
+      [
+        "GEL is typically placed in the:",
+        [
+          "Entire outsole",
+          "Heel and/or forefoot pockets of the midsole",
+          "Toe box",
+          "Tongue padding",
+        ],
+        1,
+        "Most ASICS models embed GEL in the rearfoot, forefoot, or both — where impact peaks.",
+      ],
+      [
+        "The flagship ASICS model long associated with heavy GEL cushioning is the:",
+        [
+          "GEL-Kayano",
+          "Novablast",
+          "Metaspeed Sky",
+          "GT-2000 Lite",
+        ],
+        0,
+        "The Kayano is the long-running stability flagship built around GEL.",
+      ],
+      [
+        "A customer who lands hard on their heels is a strong candidate for:",
+        [
+          "A minimalist shoe with no GEL",
+          "A GEL-equipped model with rearfoot cushioning",
+          "A racing flat",
+          "A water shoe",
+        ],
+        1,
+        "Rearfoot GEL is purpose-built to soften heavy heel strikes.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v04",
+    videoId: "v04",
+    title: "Fresh Foam X Check",
+    category: "product",
+    description: "What \"X\" means, the hexagonal pods, and Fresh Foam vs FuelCell.",
+    questions: [
+      [
+        "The \"X\" in Fresh Foam X signals:",
+        [
+          "An extra-wide last",
+          "An evolved, more cushioned and responsive version of Fresh Foam",
+          "A racing-only model",
+          "A women's-specific fit",
+        ],
+        1,
+        "New Balance uses \"X\" to mark the newer, softer, bouncier Fresh Foam formulation.",
+      ],
+      [
+        "Fresh Foam's midsole geometry is sculpted using:",
+        [
+          "Random foam pours",
+          "Data-driven hexagonal foam pods",
+          "Carbon-plate inserts",
+          "An air bladder",
+        ],
+        1,
+        "Fresh Foam midsoles are tuned with hexagonal pods that vary by location to shape ride feel.",
+      ],
+      [
+        "Compared to FuelCell, Fresh Foam X is positioned as:",
+        [
+          "A high-energy racing platform",
+          "A softer, plush daily-trainer platform",
+          "A walking-shoe-only material",
+          "A waterproof outsole",
+        ],
+        1,
+        "FuelCell is NB's race/speed foam; Fresh Foam X is the cushioned daily ride.",
+      ],
+      [
+        "Fresh Foam X is featured most prominently in which NB family?",
+        [
+          "990v6",
+          "1080",
+          "327",
+          "574",
+        ],
+        1,
+        "The 1080 is NB's premium-cushion Fresh Foam X flagship.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v05",
+    videoId: "v05",
+    title: "Pronation Check",
+    category: "technique",
+    description: "Recognizing pronation, overpronation, and what each foot needs.",
+    questions: [
+      [
+        "Pronation is best defined as:",
+        [
+          "The natural inward roll of the foot during the gait cycle",
+          "The forward push-off from the toes",
+          "The outward roll of the foot",
+          "The pause between steps",
+        ],
+        0,
+        "Pronation is the normal inward roll that helps the foot absorb impact.",
+      ],
+      [
+        "Overpronation describes a foot that:",
+        [
+          "Rolls outward excessively",
+          "Rolls inward excessively, often paired with a low arch",
+          "Stays perfectly neutral",
+          "Doesn't move at all during stance",
+        ],
+        1,
+        "Overpronators collapse too far inward and often benefit from stability shoes.",
+      ],
+      [
+        "Heavy wear on the inside (medial) edge of an old shoe suggests:",
+        [
+          "Supination",
+          "Overpronation",
+          "Neutral gait",
+          "A worn lacing system",
+        ],
+        1,
+        "Medial wear shows the foot is rolling too far inward through the stride.",
+      ],
+      [
+        "A neutral pronator typically does best in:",
+        [
+          "A motion-control shoe",
+          "A neutral, cushioned shoe",
+          "A racing flat with no cushion",
+          "A rigid hiking boot",
+        ],
+        1,
+        "Neutral feet don't need corrective posting — neutral cushion rides best.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v06",
+    videoId: "v06",
+    title: "Brannock Device Check",
+    category: "technique",
+    description: "Measuring properly: weight, both feet, and arch length.",
+    questions: [
+      [
+        "The Brannock device measures:",
+        [
+          "Foot length only",
+          "Foot length, width, and arch length",
+          "Calf circumference",
+          "Outsole wear pattern",
+        ],
+        1,
+        "All three measurements matter — length, width, and arch length.",
+      ],
+      [
+        "The customer should be measured:",
+        [
+          "Sitting down with no weight on the device",
+          "Standing with full weight on the device",
+          "Wearing thick socks while seated",
+          "With one foot lifted off the ground",
+        ],
+        1,
+        "Feet spread under load — standing weight gives the true working size.",
+      ],
+      [
+        "When heel-to-toe length and arch length differ, you should:",
+        [
+          "Always use heel-to-toe length",
+          "Always use arch length",
+          "Go with the larger of the two measurements",
+          "Average the two values",
+        ],
+        2,
+        "Picking the larger value protects the longest part of the foot inside the shoe.",
+      ],
+      [
+        "You should measure:",
+        [
+          "Only the dominant foot",
+          "Both feet, at every visit",
+          "Only at the customer's first appointment",
+          "Only the larger foot",
+        ],
+        1,
+        "Up to 80% of people have asymmetric feet — measure both, fit to the larger.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v07",
+    videoId: "v07",
+    title: "Running Shoe Selection Check",
+    category: "technique",
+    description: "Matching runners to shoes — fit, replacement, and try-on.",
+    questions: [
+      [
+        "The most important first step in matching a runner to a shoe is:",
+        [
+          "Picking the trendiest model",
+          "Identifying foot shape, arch type, and gait",
+          "Matching the color to their outfit",
+          "Starting with the cheapest pair",
+        ],
+        1,
+        "Fit and biomechanics drive the recommendation — style and price come later.",
+      ],
+      [
+        "Running shoes generally need to be replaced every:",
+        [
+          "50–100 miles",
+          "300–500 miles",
+          "1,000–1,500 miles",
+          "Two years regardless of mileage",
+        ],
+        1,
+        "Midsole foam compresses and loses rebound after roughly 300–500 miles of running.",
+      ],
+      [
+        "When trying on running shoes, a customer should:",
+        [
+          "Wear their thinnest socks for the tightest possible fit",
+          "Wear their running socks and leave a thumb's width at the toe",
+          "Pick a snug heel-to-toe fit with no extra room",
+          "Always size down half a size",
+        ],
+        1,
+        "A thumb's width at the toe accounts for forward foot slide and end-of-day swelling.",
+      ],
+      [
+        "A heavy heel-striker who runs long distances is best served by:",
+        [
+          "A zero-drop minimalist shoe",
+          "A cushioned trainer with adequate heel stack",
+          "A track spike",
+          "A skate shoe",
+        ],
+        1,
+        "Heel-strike running benefits from rearfoot cushion and a moderate heel-to-toe drop.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v08",
+    videoId: "v08",
+    title: "Gait Analysis Check",
+    category: "technique",
+    description: "Phases of gait, what to watch for, and the old-shoe tell.",
+    questions: [
+      [
+        "The gait cycle is broken into two main phases:",
+        [
+          "Lift and drop",
+          "Stance and swing",
+          "Front and back",
+          "Run and walk",
+        ],
+        1,
+        "Stance = foot on the ground; swing = foot in the air.",
+      ],
+      [
+        "During a normal stance phase, the foot:",
+        [
+          "Stays completely rigid",
+          "Strikes, rolls inward (pronates), then pushes off",
+          "Rolls only outward",
+          "Lifts straight up",
+        ],
+        1,
+        "Normal stance: heel strike → pronation for absorption → toe-off.",
+      ],
+      [
+        "Filming a customer walking on a treadmill from behind helps reveal:",
+        [
+          "Their height",
+          "Their pronation pattern and rearfoot motion",
+          "Only their stride length",
+          "Their shoe brand",
+        ],
+        1,
+        "A rear view shows exactly how the heel and rearfoot move under load.",
+      ],
+      [
+        "The first thing to check on a customer's old shoes is:",
+        [
+          "The brand label",
+          "The outsole wear pattern",
+          "The lace condition",
+          "The tongue length",
+        ],
+        1,
+        "Wear patterns tell you how the foot is actually striking and rolling.",
+      ],
+    ],
+  },
+  {
+    id: "video-quiz-v09",
+    videoId: "v09",
+    title: "Pronation vs Supination Check",
+    category: "technique",
+    description: "Spotting supinators and steering them to the right category.",
+    questions: [
+      [
+        "Supination (underpronation) is:",
+        [
+          "Excessive inward foot roll",
+          "Insufficient inward roll — the foot stays on its outside edge",
+          "A perfectly neutral gait",
+          "Backwards walking",
+        ],
+        1,
+        "Supinators don't pronate enough, so impact stays on the outside edge.",
+      ],
+      [
+        "Wear on the outside (lateral) edge of an old shoe suggests:",
+        [
+          "Overpronation",
+          "Supination",
+          "Neutral gait",
+          "Improper lacing",
+        ],
+        1,
+        "Lateral wear is the signature pattern of underpronation.",
+      ],
+      [
+        "The best shoe category for a supinator is:",
+        [
+          "Motion-control or heavy stability",
+          "Neutral, well-cushioned",
+          "Minimalist zero-drop",
+          "Steel-toed work boot",
+        ],
+        1,
+        "Supinators need cushion to compensate for poor shock absorption — not corrective posting.",
+      ],
+      [
+        "Putting a supinator into a heavy stability shoe will likely:",
+        [
+          "Fix their pronation",
+          "Push them further onto the outer edge and worsen discomfort",
+          "Have no effect at all",
+          "Make them faster",
+        ],
+        1,
+        "Medial posts meant for overpronators shove supinators even further outward — wrong direction.",
+      ],
+    ],
+  },
+].map((quiz) => ({
+  ...quiz,
+  question_count: quiz.questions.length,
+  questions: quiz.questions.map((q, i) =>
+    mkQuestion(quiz.id, i, q[0], q[1], q[2], q[3]),
+  ),
+}));
+
+/**
+ * Find the comprehension quiz attached to a Learn-tab video, if one exists.
+ * Used by the player modal's "Quiz me on this" button.
+ */
+export function getQuizForVideo(videoId) {
+  return VIDEO_QUIZZES.find((q) => q.videoId === videoId) || null;
+}

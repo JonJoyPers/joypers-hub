@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Dimensions,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -23,7 +24,13 @@ import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
 import { supabase, isSupabaseConfigured } from "../../services/supabase";
 import { getRandomQuestions, CATEGORIES } from "../../data/mockTrivia";
-import { BRAND_KNOWLEDGE, FIT_ZONE, VIDEO_RESOURCES } from "../../data/academyContent";
+import {
+  BRAND_KNOWLEDGE,
+  FIT_ZONE,
+  VIDEO_RESOURCES,
+  VIDEO_QUIZZES,
+  getQuizForVideo,
+} from "../../data/academyContent";
 
 const DIFF_COLORS = { easy: COLORS.green, medium: COLORS.amber, hard: COLORS.rose };
 const CAT_LABELS = {
@@ -107,6 +114,33 @@ function extractYouTubeId(url) {
   // Fallback: last path segment
   const last = url.split("/").pop()?.split("?")[0];
   return last && last.length === 11 ? last : null;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Video card thumbnail — shows the real YouTube mqdefault.jpg when available,
+ * falls back to the teal Play tile if the URL has no extractable ID or the
+ * image fails to load (e.g. offline, video deleted).
+ * ────────────────────────────────────────────────────────────────────────── */
+function VideoThumbnail({ url }) {
+  const id = extractYouTubeId(url);
+  const [failed, setFailed] = useState(false);
+
+  if (!id || failed) {
+    return (
+      <View style={styles.videoThumb}>
+        <Play size={24} color={COLORS.teal} strokeWidth={2} fill={COLORS.teal} />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: `https://img.youtube.com/vi/${id}/mqdefault.jpg` }}
+      style={styles.videoThumb}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -447,9 +481,19 @@ export default function AcademyScreen() {
   }, []);
 
   // ── Fetch quizzes ──
+  // Per-video comprehension quizzes are local — always tacked onto whatever
+  // the quiz source returns so they show up regardless of Supabase state.
+  const videoQuizListItems = VIDEO_QUIZZES.map((q) => ({
+    id: q.id,
+    title: q.title,
+    category: q.category,
+    description: q.description,
+    question_count: q.question_count,
+  }));
+
   const fetchQuizzes = useCallback(async () => {
     if (!isSupabaseConfigured()) {
-      setQuizzes(FALLBACK_QUIZZES);
+      setQuizzes([...FALLBACK_QUIZZES, ...videoQuizListItems]);
       setQuizLoading(false);
       return;
     }
@@ -464,24 +508,26 @@ export default function AcademyScreen() {
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        setQuizzes(FALLBACK_QUIZZES);
+        setQuizzes([...FALLBACK_QUIZZES, ...videoQuizListItems]);
       } else {
-        setQuizzes(
-          data.map((q) => ({
+        setQuizzes([
+          ...data.map((q) => ({
             id: String(q.id),
             title: q.title,
             category: q.category,
             description: q.description || "",
             question_count: q.question_count || 0,
-          }))
-        );
+          })),
+          ...videoQuizListItems,
+        ]);
       }
     } catch (err) {
       console.error("Failed to fetch quizzes:", err.message);
-      setQuizzes(FALLBACK_QUIZZES);
+      setQuizzes([...FALLBACK_QUIZZES, ...videoQuizListItems]);
     } finally {
       setQuizLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load a single quiz's questions ──
@@ -490,6 +536,18 @@ export default function AcademyScreen() {
     if (quiz.id.startsWith("fallback-")) {
       const qs = getFallbackQuestions(quiz.id);
       setActiveQuizQuestions(qs);
+      setActiveQuiz(quiz);
+      return;
+    }
+
+    // Per-video comprehension quiz — questions ship in the bundle.
+    if (quiz.id.startsWith("video-quiz-")) {
+      const found = VIDEO_QUIZZES.find((q) => q.id === quiz.id);
+      if (!found) {
+        Alert.alert("No Questions", "This quiz isn't available.");
+        return;
+      }
+      setActiveQuizQuestions(found.questions);
       setActiveQuiz(quiz);
       return;
     }
@@ -539,6 +597,7 @@ export default function AcademyScreen() {
   const saveScore = async (quizId, scoreVal, total) => {
     if (!isSupabaseConfigured() || !user) return;
     if (quizId.startsWith("fallback-")) return;
+    if (quizId.startsWith("video-quiz-")) return;
 
     try {
       await supabase.from("academy_scores").insert({
@@ -739,9 +798,7 @@ export default function AcademyScreen() {
                       onPress={() => setPlayerVideo(video)}
                       activeOpacity={0.8}
                     >
-                      <View style={styles.videoThumb}>
-                        <Play size={24} color={COLORS.teal} strokeWidth={2} fill={COLORS.teal} />
-                      </View>
+                      <VideoThumbnail url={video.url} />
                       <View style={styles.videoInfo}>
                         <Text style={styles.videoTitle}>{video.title}</Text>
                         <Text style={styles.videoMeta}>
@@ -1010,6 +1067,28 @@ export default function AcademyScreen() {
                 />
               ) : null}
             </View>
+            {(() => {
+              const quiz = playerVideo ? getQuizForVideo(playerVideo.id) : null;
+              if (!quiz) return null;
+              return (
+                <View style={styles.playerFooter}>
+                  <Text style={styles.playerFooterHint}>
+                    Done watching? Lock in what you learned.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.playerQuizBtn}
+                    onPress={() => {
+                      setPlayerVideo(null);
+                      loadQuizQuestions(quiz);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Brain size={16} color={COLORS.charcoal} strokeWidth={2.5} />
+                    <Text style={styles.playerQuizBtnText}>QUIZ ME ON THIS</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </View>
         </View>
       </Modal>
@@ -1198,5 +1277,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
+  },
+  playerFooter: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
+    backgroundColor: COLORS.charcoalMid,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.charcoalLight,
+  },
+  playerFooterHint: {
+    fontSize: 12,
+    color: COLORS.creamMuted,
+    textAlign: "center",
+  },
+  playerQuizBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.teal,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  playerQuizBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.charcoal,
+    letterSpacing: 1.5,
   },
 });

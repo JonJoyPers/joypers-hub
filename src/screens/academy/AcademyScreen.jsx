@@ -455,6 +455,11 @@ export default function AcademyScreen() {
             source: v.source || "",
             duration: v.duration || "",
             url: v.video_url || v.url || "",
+            // Supabase-linked quiz id (nullable). Resolves to a quiz in
+            // the loaded quizzes list for the player modal's "Quiz me
+            // on this" button. Stored as string for type-consistent
+            // lookups against quiz.id (also stringified).
+            quizId: v.quiz_id != null ? String(v.quiz_id) : null,
           })),
       }));
 
@@ -1068,7 +1073,15 @@ export default function AcademyScreen() {
               ) : null}
             </View>
             {(() => {
-              const quiz = playerVideo ? getQuizForVideo(playerVideo.id) : null;
+              // Two paths: Supabase-sourced videos carry a quizId field
+              // pointing at a quiz in the loaded quizzes list; hardcoded
+              // videos (id like "v01") match against the shipped
+              // VIDEO_QUIZZES by videoId.
+              const quiz = !playerVideo
+                ? null
+                : playerVideo.quizId
+                ? quizzes.find((q) => q.id === playerVideo.quizId) || null
+                : getQuizForVideo(playerVideo.id);
               if (!quiz) return null;
               return (
                 <View style={styles.playerFooter}>

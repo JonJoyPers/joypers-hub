@@ -22,6 +22,7 @@ interface AcademyVideo {
   duration: string;
   source: string;
   sort_order: number;
+  quiz_id: number | null;
 }
 
 interface AcademyQuiz {
@@ -37,6 +38,7 @@ interface AcademyQuestion {
   question: string;
   options: string[];
   correct_index: number;
+  explanation: string | null;
 }
 
 interface AcademyScore {
@@ -61,6 +63,7 @@ interface VideoForm {
   url: string;
   duration: string;
   source: string;
+  quiz_id: number | null;
 }
 
 interface QuizForm {
@@ -72,6 +75,7 @@ interface QuestionForm {
   question: string;
   options: string[];
   correct_index: number;
+  explanation: string;
 }
 
 type Tab = "modules" | "quizzes" | "scores";
@@ -94,12 +98,13 @@ const inputClass =
   "w-full px-3 py-2 bg-charcoal-light border border-charcoal-light rounded-lg text-cream text-sm focus:outline-none focus:border-teal";
 
 const emptyModuleForm: ModuleForm = { title: "", description: "", category: "General" };
-const emptyVideoForm: VideoForm = { title: "", url: "", duration: "", source: "" };
+const emptyVideoForm: VideoForm = { title: "", url: "", duration: "", source: "", quiz_id: null };
 const emptyQuizForm: QuizForm = { title: "", category: "General" };
 const emptyQuestionForm: QuestionForm = {
   question: "",
   options: ["", "", "", ""],
   correct_index: 0,
+  explanation: "",
 };
 
 /* ─── Helpers ─── */
@@ -122,6 +127,21 @@ function formatDateTime(d: string | null): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+// Pull a YouTube video ID out of any common URL shape. Returns null if the
+// URL doesn't look like a YouTube link — the caller falls back to a
+// generic play tile in that case. Mirrors the mobile app's extractor.
+function extractYouTubeId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const longMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (longMatch) return longMatch[1];
+  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return shortMatch[1];
+  const embedMatch = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (embedMatch) return embedMatch[1];
+  const last = url.split("/").pop()?.split("?")[0];
+  return last && last.length === 11 ? last : null;
 }
 
 /* ─── Main Component ─── */
@@ -338,6 +358,7 @@ export default function AcademyPage() {
       url: v.url,
       duration: v.duration,
       source: v.source,
+      quiz_id: v.quiz_id,
     });
     setShowVideoModal(true);
     setError("");
@@ -360,6 +381,7 @@ export default function AcademyPage() {
             url: videoForm.url.trim(),
             duration: videoForm.duration.trim(),
             source: videoForm.source.trim(),
+            quiz_id: videoForm.quiz_id,
           })
           .eq("id", editingVideo.id);
         if (err) throw err;
@@ -371,6 +393,7 @@ export default function AcademyPage() {
           url: videoForm.url.trim(),
           duration: videoForm.duration.trim(),
           source: videoForm.source.trim(),
+          quiz_id: videoForm.quiz_id,
           sort_order: maxOrder + 1,
         });
         if (err) throw err;
@@ -484,6 +507,7 @@ export default function AcademyPage() {
       question: q.question,
       options: [...q.options],
       correct_index: q.correct_index,
+      explanation: q.explanation ?? "",
     });
     setShowQuestionModal(true);
     setError("");
@@ -506,6 +530,7 @@ export default function AcademyPage() {
         question: questionForm.question.trim(),
         options: questionForm.options.map((o) => o.trim()),
         correct_index: questionForm.correct_index,
+        explanation: questionForm.explanation.trim() || null,
       };
       if (editingQuestion) {
         const { error: err } = await supabase
@@ -754,44 +779,64 @@ export default function AcademyPage() {
                           </p>
                         ) : (
                           <div className="space-y-2">
-                            {videos.map((v) => (
-                              <div
-                                key={v.id}
-                                className="flex items-center gap-3 p-3 bg-charcoal rounded-lg border border-charcoal-light"
-                              >
-                                <div className="w-10 h-10 rounded-lg bg-teal/15 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-teal-light text-lg">&#9654;</span>
+                            {videos.map((v) => {
+                              const ytId = extractYouTubeId(v.url);
+                              const linkedQuiz = v.quiz_id
+                                ? quizzes.find((q) => q.id === v.quiz_id)
+                                : null;
+                              return (
+                                <div
+                                  key={v.id}
+                                  className="flex items-center gap-3 p-3 bg-charcoal rounded-lg border border-charcoal-light"
+                                >
+                                  <div className="w-16 h-12 rounded-lg bg-teal/15 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                    {ytId ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-teal-light text-lg">&#9654;</span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-cream truncate">
+                                      {v.title}
+                                    </p>
+                                    <p className="text-xs text-cream-muted">
+                                      {[v.source, v.duration].filter(Boolean).join(" · ")}
+                                    </p>
+                                    {linkedQuiz && (
+                                      <p className="text-[10px] text-teal-light mt-0.5">
+                                        Quiz: {linkedQuiz.title}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <a
+                                    href={v.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-teal-light hover:text-teal underline"
+                                  >
+                                    Open
+                                  </a>
+                                  <button
+                                    onClick={() => openEditVideo(v)}
+                                    className="text-xs text-cream-muted hover:text-cream"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteVideo(v.id)}
+                                    className="text-xs text-red/70 hover:text-red"
+                                  >
+                                    Delete
+                                  </button>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-cream truncate">
-                                    {v.title}
-                                  </p>
-                                  <p className="text-xs text-cream-muted">
-                                    {v.source} &middot; {v.duration}
-                                  </p>
-                                </div>
-                                <a
-                                  href={v.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-teal-light hover:text-teal underline"
-                                >
-                                  Open
-                                </a>
-                                <button
-                                  onClick={() => openEditVideo(v)}
-                                  className="text-xs text-cream-muted hover:text-cream"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => deleteVideo(v.id)}
-                                  className="text-xs text-red/70 hover:text-red"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -972,6 +1017,16 @@ export default function AcademyPage() {
                                     </div>
                                   ))}
                                 </div>
+                                {q.explanation && (
+                                  <div className="mt-3 px-3 py-2 rounded-lg bg-teal/10 border-l-2 border-teal/40">
+                                    <p className="text-[10px] font-bold text-teal-light tracking-wider mb-1">
+                                      EXPLANATION
+                                    </p>
+                                    <p className="text-xs text-cream-muted leading-relaxed">
+                                      {q.explanation}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -1331,6 +1386,31 @@ export default function AcademyPage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-xs text-cream-muted font-semibold mb-1">
+                    Comprehension Quiz <span className="text-cream-muted/60">(optional)</span>
+                  </label>
+                  <select
+                    value={videoForm.quiz_id ?? ""}
+                    onChange={(e) =>
+                      setVideoForm({
+                        ...videoForm,
+                        quiz_id: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">No quiz linked</option>
+                    {quizzes.map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {q.title}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-cream-muted mt-1">
+                    Picks the quiz shown in the mobile player&apos;s &ldquo;Quiz me on this&rdquo; button.
+                  </p>
+                </div>
               </div>
               {error && (
                 <p className="text-red text-xs mt-3">{error}</p>
@@ -1489,6 +1569,19 @@ export default function AcademyPage() {
                       {String.fromCharCode(65 + questionForm.correct_index)}
                     </span>
                   </p>
+                </div>
+                <div>
+                  <label className="block text-xs text-cream-muted font-semibold mb-1">
+                    Explanation <span className="text-cream-muted/60">(optional)</span>
+                  </label>
+                  <textarea
+                    value={questionForm.explanation}
+                    onChange={(e) =>
+                      setQuestionForm({ ...questionForm, explanation: e.target.value })
+                    }
+                    className={`${inputClass} h-20 resize-none`}
+                    placeholder="Shown after the employee picks an answer — why the correct option is correct."
+                  />
                 </div>
               </div>
               {error && (

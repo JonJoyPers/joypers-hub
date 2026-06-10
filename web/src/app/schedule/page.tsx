@@ -267,6 +267,9 @@ export default function SchedulePage() {
   const [shiftModal, setShiftModal] = useState<{ mode: "add" | "edit"; shift?: Shift; prefill?: Partial<ShiftFormData> } | null>(null);
   const [closureModal, setClosureModal] = useState(false);
   const [copyWeekModal, setCopyWeekModal] = useState(false);
+  const [autoFillModal, setAutoFillModal] = useState(false);
+  const [autoFillResult, setAutoFillResult] = useState<string | null>(null);
+  const [autoFillBusy, setAutoFillBusy] = useState(false);
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [closureDate, setClosureDate] = useState("");
@@ -478,6 +481,102 @@ export default function SchedulePage() {
     fetchShifts();
   }
 
+  // ─── Auto-fill from availability ───
+  // Builds shifts for the current week from each visible employee's
+  // employee_availability rows: times verbatim, default type, skipping
+  // closed days and days that already have a shift for that employee.
+
+  async function autoFillFromAvailability() {
+    if (autoFillBusy) return;
+    setAutoFillBusy(true);
+    setAutoFillResult(null);
+    try {
+      const employeeIds = employees.map((e) => e.id);
+      if (employeeIds.length === 0) {
+        setAutoFillResult("No employees visible. Adjust the location filter and try again.");
+        return;
+      }
+
+      const { data: availabilityRows, error: availErr } = await supabase
+        .from("employee_availability")
+        .select("employee_id, day_of_week, start_time, end_time, is_available")
+        .in("employee_id", employeeIds);
+      if (availErr) {
+        setAutoFillResult(`Couldn't load availability: ${availErr.message}`);
+        return;
+      }
+
+      const empById = new Map(employees.map((e) => [e.id, e]));
+      const existingKey = (eid: string, date: string) => `${eid}::${date}`;
+      const existing = new Set(shifts.map((s) => existingKey(s.employee_id, s.date)));
+
+      const newShifts: {
+        employee_id: string;
+        location_id: number | null;
+        date: string;
+        start_time: string;
+        end_time: string;
+        type: string;
+        published: boolean;
+      }[] = [];
+
+      let skippedClosed = 0;
+      let skippedExisting = 0;
+
+      for (const row of availabilityRows ?? []) {
+        if (!row.is_available || !row.start_time || !row.end_time) continue;
+        if (row.day_of_week < 0 || row.day_of_week > 6) continue;
+        const date = weekDates[row.day_of_week];
+        if (!date) continue;
+        if (isDateClosed(date)) {
+          skippedClosed++;
+          continue;
+        }
+        if (existing.has(existingKey(row.employee_id, date))) {
+          skippedExisting++;
+          continue;
+        }
+        const emp = empById.get(row.employee_id);
+        if (!emp) continue;
+
+        newShifts.push({
+          employee_id: row.employee_id,
+          location_id: emp.location_id,
+          date,
+          start_time: `${date}T${row.start_time}`,
+          end_time: `${date}T${row.end_time}`,
+          type: "opening",
+          published: false,
+        });
+      }
+
+      if (newShifts.length === 0) {
+        const parts: string[] = ["No shifts to add."];
+        if (skippedExisting) parts.push(`${skippedExisting} day(s) already had a shift.`);
+        if (skippedClosed) parts.push(`${skippedClosed} day(s) were marked closed.`);
+        if (!skippedExisting && !skippedClosed) {
+          parts.push("None of the visible employees have availability set for this week.");
+        }
+        setAutoFillResult(parts.join(" "));
+        return;
+      }
+
+      const { error } = await supabase.from("shifts").insert(newShifts);
+      if (error) {
+        setAutoFillResult(`Insert failed: ${error.message}`);
+        return;
+      }
+
+      const summary = [`Added ${newShifts.length} shift${newShifts.length === 1 ? "" : "s"}.`];
+      if (skippedExisting) summary.push(`Skipped ${skippedExisting} (already scheduled).`);
+      if (skippedClosed) summary.push(`Skipped ${skippedClosed} (store closed).`);
+      setAutoFillResult(summary.join(" "));
+      fetchShifts();
+    } finally {
+      setAutoFillBusy(false);
+    }
+  }
+
   // ─── Publish ───
 
   async function publishWeek() {
@@ -547,6 +646,16 @@ export default function SchedulePage() {
 
           {/* Actions */}
           <button onClick={() => setCopyWeekModal(true)} className={btnSecondary}>Copy Week</button>
+          <button
+            onClick={() => {
+              setAutoFillResult(null);
+              setAutoFillModal(true);
+            }}
+            className={btnSecondary}
+            title="Add shifts from each visible employee's saved availability"
+          >
+            Fill from Availability
+          </button>
           <button
             onClick={() => setPublishConfirm(true)}
             className={`px-4 py-2 rounded-lg text-sm ${
@@ -745,6 +854,63 @@ export default function SchedulePage() {
               </button>
             );
           })}
+        </div>
+      </Modal>
+
+      {/* ─── Auto-Fill from Availability Modal ─── */}
+      <Modal
+        open={autoFillModal}
+        onClose={() => {
+          if (autoFillBusy) return;
+          setAutoFillModal(false);
+        }}
+        title="Fill from Availability"
+      >
+        <div className="space-y-4">
+          {!autoFillResult ? (
+            <>
+              <p className="text-sm text-cream-muted">
+                Adds shifts to the week of {formatDateLabel(weekStart)} using each visible
+                employee&apos;s saved availability times. Days that already have a shift for that
+                employee, and days marked as store closures, will be skipped.
+              </p>
+              <p className="text-xs text-cream-muted/70">
+                {employees.length} employee{employees.length === 1 ? "" : "s"} in scope
+                {selectedLocationId !== null ? " (filtered by current location)" : ""}.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setAutoFillModal(false)}
+                  className={btnSecondary}
+                  disabled={autoFillBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={autoFillFromAvailability}
+                  className={btnPrimary}
+                  disabled={autoFillBusy || employees.length === 0}
+                >
+                  {autoFillBusy ? "Filling…" : "Fill Week"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-cream">{autoFillResult}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setAutoFillModal(false);
+                    setAutoFillResult(null);
+                  }}
+                  className={btnPrimary}
+                >
+                  Done
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 

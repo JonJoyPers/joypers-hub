@@ -33,6 +33,7 @@ interface Employee {
   id: string;
   name: string;
   role: string;
+  title: string | null;
   location_id: number | null;
 }
 
@@ -302,7 +303,7 @@ export default function SchedulePage() {
   async function fetchEmployees() {
     const base = supabase
       .from("employees")
-      .select("id, name, role, location_id")
+      .select("id, name, role, title, location_id")
       .eq("is_active", true)
       .order("name");
     const { data } = selectedLocationId
@@ -729,7 +730,7 @@ export default function SchedulePage() {
                 <tr key={emp.id} className="border-t border-charcoal-light/30">
                   <td className="sticky left-0 bg-charcoal z-10 p-2">
                     <div className="text-sm text-cream font-medium truncate">{emp.name}</div>
-                    <div className="text-xs text-cream-muted">{emp.role}</div>
+                    <div className="text-xs text-cream-muted">{emp.title || "—"}</div>
                   </td>
                   {weekDates.map((date) => {
                     const cellShifts = shifts.filter(

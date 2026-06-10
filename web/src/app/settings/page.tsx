@@ -377,6 +377,18 @@ export default function SettingsPage() {
     setSettingJson("roles.titles", titles.filter((x) => x !== t));
   }
 
+  // Move a title up or down in the ordered list. The list's order drives
+  // the Schedule view's "Sort by Position" mode, so titles higher in the
+  // list (e.g. Store Manager) sort to the top of the grid.
+  function moveTitle(t: string, direction: -1 | 1) {
+    const idx = titles.indexOf(t);
+    const swap = idx + direction;
+    if (idx < 0 || swap < 0 || swap >= titles.length) return;
+    const next = [...titles];
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setSettingJson("roles.titles", next);
+  }
+
   function addDepartment() {
     if (!newDepartment.trim() || departments.includes(newDepartment.trim())) return;
     setSettingJson("roles.departments", [...departments, newDepartment.trim()]);
@@ -834,10 +846,30 @@ export default function SettingsPage() {
               <div className="bg-charcoal-mid rounded-xl border border-charcoal-light p-6 mb-6">
                 <h4 className="text-sm font-semibold text-cream mb-4">Job Titles</h4>
                 <p className="text-xs text-cream-muted mb-3">These titles appear in the dropdown when assigning a title to an employee.</p>
+                <p className="text-xs text-cream-muted mb-3">Drag with the ↑/↓ buttons to reorder — this order drives the Schedule view&apos;s &ldquo;Sort by Position&rdquo; option.</p>
                 <div className="space-y-2 mb-3">
-                  {titles.map((title) => (
-                    <div key={title} className="flex items-center justify-between bg-charcoal-light/20 rounded-lg px-4 py-2.5">
-                      <span className="text-sm text-cream">{title}</span>
+                  {titles.map((title, i) => (
+                    <div key={title} className="flex items-center gap-2 bg-charcoal-light/20 rounded-lg px-3 py-2.5">
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => moveTitle(title, -1)}
+                          disabled={i === 0}
+                          aria-label={`Move ${title} up`}
+                          className="text-cream-muted hover:text-cream disabled:opacity-20 disabled:cursor-not-allowed text-xs leading-none"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => moveTitle(title, 1)}
+                          disabled={i === titles.length - 1}
+                          aria-label={`Move ${title} down`}
+                          className="text-cream-muted hover:text-cream disabled:opacity-20 disabled:cursor-not-allowed text-xs leading-none"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                      <span className="text-xs text-cream-muted/60 w-5 text-right tabular-nums">{i + 1}.</span>
+                      <span className="text-sm text-cream flex-1">{title}</span>
                       <button onClick={() => removeTitle(title)} className="text-red/60 hover:text-red text-xs">remove</button>
                     </div>
                   ))}

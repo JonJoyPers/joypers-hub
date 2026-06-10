@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
@@ -272,6 +272,8 @@ export default function SchedulePage() {
   const [autoFillResult, setAutoFillResult] = useState<string | null>(null);
   const [autoFillBusy, setAutoFillBusy] = useState(false);
   const [publishConfirm, setPublishConfirm] = useState(false);
+  const [sortMode, setSortMode] = useState<"name" | "position">("name");
+  const [titleOrder, setTitleOrder] = useState<string[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [closureDate, setClosureDate] = useState("");
   const [closureReason, setClosureReason] = useState("");
@@ -337,13 +339,14 @@ export default function SchedulePage() {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from("app_settings")
-        .select("value")
-        .eq("key", "schedule.shiftTypes")
-        .single();
-      if (data?.value) {
+        .select("key, value")
+        .in("key", ["schedule.shiftTypes", "roles.titles"]);
+      for (const row of data ?? []) {
         try {
-          const parsed = JSON.parse(data.value);
-          if (Array.isArray(parsed) && parsed.length > 0) setShiftTypeConfigs(parsed);
+          const parsed = JSON.parse(row.value);
+          if (!Array.isArray(parsed)) continue;
+          if (row.key === "schedule.shiftTypes" && parsed.length > 0) setShiftTypeConfigs(parsed);
+          if (row.key === "roles.titles") setTitleOrder(parsed.filter((x) => typeof x === "string"));
         } catch { /* use defaults */ }
       }
     };
@@ -355,6 +358,27 @@ export default function SchedulePage() {
   useEffect(() => { fetchShifts(); fetchClosures(); }, [weekStart, selectedLocationId]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchEmployees(); }, [selectedLocationId]);
+
+  // Employees sorted for display. "Name" preserves the alphabetical order
+  // fetchEmployees already returns; "Position" ranks each employee by where
+  // their title sits in roles.titles (managed in Settings), then by name as
+  // a tiebreaker. Employees with no title or a title that isn't in the
+  // list rank after all the known positions.
+  const sortedEmployees = useMemo(() => {
+    if (sortMode === "name") return employees;
+    const unknownRank = titleOrder.length;
+    const rankOf = (t: string | null) => {
+      if (!t) return unknownRank + 1;
+      const idx = titleOrder.indexOf(t);
+      return idx >= 0 ? idx : unknownRank;
+    };
+    return [...employees].sort((a, b) => {
+      const ra = rankOf(a.title);
+      const rb = rankOf(b.title);
+      if (ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name);
+    });
+  }, [employees, sortMode, titleOrder]);
 
   // ─── Closure helpers ───
 
@@ -656,6 +680,17 @@ export default function SchedulePage() {
             ))}
           </select>
 
+          {/* Sort Mode */}
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as "name" | "position")}
+            title="Row order"
+            className="bg-charcoal-light border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm"
+          >
+            <option value="name">Sort: Name</option>
+            <option value="position">Sort: Position</option>
+          </select>
+
           {/* Actions */}
           <button onClick={() => setCopyWeekModal(true)} className={btnSecondary}>Copy Week</button>
           <button
@@ -726,7 +761,7 @@ export default function SchedulePage() {
               </tr>
             </thead>
             <tbody>
-              {employees.map((emp) => (
+              {sortedEmployees.map((emp) => (
                 <tr key={emp.id} className="border-t border-charcoal-light/30">
                   <td className="sticky left-0 bg-charcoal z-10 p-2">
                     <div className="text-sm text-cream font-medium truncate">{emp.name}</div>

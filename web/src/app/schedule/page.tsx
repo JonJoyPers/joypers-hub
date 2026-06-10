@@ -539,12 +539,23 @@ export default function SchedulePage() {
         const emp = empById.get(row.employee_id);
         if (!emp) continue;
 
+        // Match saveShift's offset-suffix pattern so the bare HH:MM:SS from
+        // employee_availability lands in Supabase as a tz-correct instant for
+        // the manager's local clock — without it, "10:00:00" gets stored as
+        // 10:00 UTC and renders 7h early in PDT (or whatever the local offset).
+        const startHHMM = String(row.start_time).slice(0, 5);
+        const endHHMM = String(row.end_time).slice(0, 5);
+        const off = new Date(`${date}T${startHHMM}`).getTimezoneOffset();
+        const sign = off <= 0 ? "+" : "-";
+        const absOff = Math.abs(off);
+        const tz = `${sign}${String(Math.floor(absOff / 60)).padStart(2, "0")}:${String(absOff % 60).padStart(2, "0")}`;
+
         newShifts.push({
           employee_id: row.employee_id,
           location_id: emp.location_id,
           date,
-          start_time: `${date}T${row.start_time}`,
-          end_time: `${date}T${row.end_time}`,
+          start_time: `${date}T${startHHMM}:00${tz}`,
+          end_time: `${date}T${endHHMM}:00${tz}`,
           type: "opening",
           published: false,
         });

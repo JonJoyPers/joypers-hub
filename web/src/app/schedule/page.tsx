@@ -272,7 +272,15 @@ export default function SchedulePage() {
   const [autoFillResult, setAutoFillResult] = useState<string | null>(null);
   const [autoFillBusy, setAutoFillBusy] = useState(false);
   const [publishConfirm, setPublishConfirm] = useState(false);
-  const [sortMode, setSortMode] = useState<"name" | "position">("name");
+  const [sortMode, setSortMode] = useState<"name" | "position">(() => {
+    if (typeof window === "undefined") return "name";
+    const saved = window.localStorage.getItem("schedule.sortMode");
+    return saved === "position" ? "position" : "name";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("schedule.sortMode", sortMode);
+  }, [sortMode]);
   const [titleOrder, setTitleOrder] = useState<string[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [closureDate, setClosureDate] = useState("");

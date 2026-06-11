@@ -87,28 +87,42 @@ const COLOR_CLASSES: Record<string, string> = {
   blue: "bg-blue/20 text-blue border-blue/30",
 };
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /* ─── helpers ─── */
 
-function getMonday(): string {
+// Local YYYY-MM-DD — never go through toISOString() for these. UTC
+// conversion shifts late-night PDT into the next day's UTC string and
+// causes the schedule grid to render the wrong week.
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Sunday of the current local week. getDay() returns 0 for Sun, so
+// subtracting it lands on this week's Sunday on every day of the week
+// including Sunday itself (the prior buggy version added +1, which
+// jumped a Sunday viewer to the following Monday).
+function getWeekStart(): string {
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay() + 1);
-  return d.toISOString().split("T")[0];
+  d.setDate(d.getDate() - d.getDay());
+  return toLocalDateString(d);
 }
 
 function getWeekDates(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart + "T00:00:00");
     d.setDate(d.getDate() + i);
-    return d.toISOString().split("T")[0];
+    return toLocalDateString(d);
   });
 }
 
 function shiftWeek(weekStart: string, delta: number): string {
   const d = new Date(weekStart + "T00:00:00");
   d.setDate(d.getDate() + delta);
-  return d.toISOString().split("T")[0];
+  return toLocalDateString(d);
 }
 
 function formatTime(iso: string): string {
@@ -120,7 +134,7 @@ function formatDateLabel(date: string): string {
 }
 
 function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
+  return toLocalDateString(new Date());
 }
 
 /* ─── Droppable Cell ─── */
@@ -263,7 +277,7 @@ export default function SchedulePage() {
   const [shiftTypeConfigs, setShiftTypeConfigs] = useState<ShiftTypeConfig[]>(DEFAULT_SHIFT_TYPES);
 
   // UI state
-  const [weekStart, setWeekStart] = useState(getMonday);
+  const [weekStart, setWeekStart] = useState(getWeekStart);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
   const [shiftModal, setShiftModal] = useState<{ mode: "add" | "edit"; shift?: Shift; prefill?: Partial<ShiftFormData> } | null>(null);
   const [closureModal, setClosureModal] = useState(false);
@@ -559,7 +573,10 @@ export default function SchedulePage() {
       for (const row of availabilityRows ?? []) {
         if (!row.is_available || !row.start_time || !row.end_time) continue;
         if (row.day_of_week < 0 || row.day_of_week > 6) continue;
-        const date = weekDates[row.day_of_week];
+        // employee_availability.day_of_week is Mon=0..Sun=6 (set by the
+        // employees portal's availability editor); weekDates is Sun..Sat.
+        // Shift by 1, mod 7, to land each weekday in the right column.
+        const date = weekDates[(row.day_of_week + 1) % 7];
         if (!date) continue;
         if (isDateClosed(date)) {
           skippedClosed++;
